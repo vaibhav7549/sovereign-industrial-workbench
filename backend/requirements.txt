@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+aiohttp
+python-multipart
+pypdf
+langchain
+langchain-openai
+langgraph
+python-docx
+python-dotenv
+requests
+trafilatura
+sumy
+nltk

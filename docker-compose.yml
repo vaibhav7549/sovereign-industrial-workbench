@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sovereign-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LLM_BASE_URL=http://host.docker.internal:1234/v1
+      - LLM_MODEL=qwen2.5-7b-instruct-1m
+      - LLM_API_KEY=1234
+      - MCP_URL=http://host.docker.internal:8080/mcp
+      - MCP_AUTH_HEADER=Bearer at_aoUQcp-j1DfR8cbEDhY7pEEuBgSqn7e0Xf5qkWFE1lo
+      - SERPAPI_KEY=70df7ca148311e422f45db74d365ff8bfcde7463435305070f6787156f4745cf
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: sovereign-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
