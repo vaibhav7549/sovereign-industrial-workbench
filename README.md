@@ -101,49 +101,53 @@ You can run the workbench either **Locally (Bare Metal)** or with **Docker Compo
 - **Node.js**: `v18+` or `v20+` (Run `node -v` to verify)
 - **Python**: `3.10+` or `3.11+` (Run `python --version` to verify)
 
-#### Step 1: Start the Backend (Terminal 1)
+> 💡 Open **two terminals** and run both columns below at the same time.
 
-1. Open PowerShell / Command Prompt and navigate to the backend:
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### 🐍 Step 1: Start the Backend
+**(Terminal 1)**
+
+1. Navigate to the backend:
    ```powershell
-   cd "d:\Vaibhav Programs\Mini-Project 2\micromax\backend"
+   cd backend
    ```
 
-2. Create and activate a Python virtual environment:
+2. Create and activate a virtual environment:
    ```powershell
-   # Windows (PowerShell)
    python -m venv venv
    .\venv\Scripts\activate
-
-   # If PowerShell shows script execution policy error:
-   # Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   # .\venv\Scripts\activate
    ```
+   > If PowerShell shows a script execution policy error, run:
+   > `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
+   > then activate again.
 
 3. Install backend dependencies:
    ```powershell
    pip install -r requirements.txt
    ```
 
-4. Verify your environment file:
-   The backend already includes a pre-configured `.env` file. You can inspect or modify it:
-   ```powershell
-   # backend/.env contains LLM, MCP, and port configuration
-   ```
+4. Verify your environment file. The backend already includes a pre-configured `backend/.env` (LLM, MCP and port configuration). Inspect or modify it if needed.
 
 5. Launch the backend API server:
    ```powershell
    python main.py
    ```
-   *The backend will start on **`http://localhost:8000`**.*  
-   *Interactive API documentation is available at **`http://localhost:8000/docs`**.*
 
----
+✅ Backend: **`http://localhost:8000`**
+📖 API docs: **`http://localhost:8000/docs`**
 
-#### Step 2: Start the Frontend (Terminal 2)
+</td>
+<td width="50%" valign="top">
 
-1. Open a **second** terminal window and navigate to the frontend:
+#### ⚛️ Step 2: Start the Frontend
+**(Terminal 2)**
+
+1. Open a **second** terminal and navigate to the frontend:
    ```powershell
-   cd "d:\Vaibhav Programs\Mini-Project 2\micromax\frontend"
+   cd frontend
    ```
 
 2. Install Node dependencies:
@@ -156,10 +160,16 @@ You can run the workbench either **Locally (Bare Metal)** or with **Docker Compo
    npm run dev
    ```
 
-4. Open your web browser and navigate to:
+4. Open your browser and go to:
    ```
    http://localhost:5173
    ```
+
+✅ Frontend: **`http://localhost:5173`**
+
+</td>
+</tr>
+</table>
 
 ---
 
