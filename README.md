@@ -1,27 +1,61 @@
-# Sovereign On-Premise Agentic AI Workbench
-> **Using Open-Weight Multimodal LLMs for Confidential Industrial Work**
+<div align="center">
+
+# 🏭 Sovereign On-Premise Agentic AI Workbench
+
+### Using Open-Weight Multimodal LLMs for Confidential Industrial Work
+
+*An air-gapped, agentic knowledge platform that keeps industrial intelligence inside the plant perimeter.*
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6%2B-646CFF.svg)](https://vitejs.dev/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic-1C3C3C.svg)](https://www.langchain.com/langgraph)
+[![MCP](https://img.shields.io/badge/Protocol-MCP-black.svg)](https://modelcontextprotocol.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#-license)
+
+[Overview](#-overview) •
+[Architecture](#-system-architecture) •
+[Features](#-key-features) •
+[Quick Start](#-quick-start) •
+[LLM Setup](#-connecting-your-llm) •
+[API](#-api-reference) •
+[Team](#-team)
+
+</div>
 
 ---
 
-## 📌 Executive Summary
+## 📌 Overview
 
-Modern industrial facilities (chemical refineries, manufacturing plants, critical energy infrastructure) generate immense volumes of proprietary technical literature, standard operating procedures (SOPs), and equipment specifications. Standard commercial cloud-hosted AI APIs violate strict air-gap compliance and risk exposing confidential operational intelligence.
+Industrial facilities such as chemical refineries, manufacturing plants and energy infrastructure produce large volumes of proprietary technical literature: standard operating procedures (SOPs), equipment specifications, safety manuals and maintenance records. Commercial cloud-hosted AI APIs conflict with air-gap compliance requirements and risk leaking confidential operational data.
 
-The **Sovereign On-Premise Agentic AI Workbench** is an enterprise-grade, air-gapped knowledge platform that interfaces open-weight foundation models (such as **Qwen-2.5**, **DeepSeek**, and **Llama-3**) with a centralized **Atomic Knowledge Graph** using the **Model Context Protocol (MCP)**. It equips industrial plant engineers and technical operators with:
+The **Sovereign On-Premise Agentic AI Workbench** addresses this by running open-weight foundation models (**Qwen 2.5**, **DeepSeek**, **Llama 3**) entirely on local hardware. The models are connected to a centralized **Atomic Knowledge Graph** through the **Model Context Protocol (MCP)**, so plant engineers and operators can query, ingest and reason over their own documentation, with nothing leaving the internal network.
 
-- **Sovereign Local Inference**: Eliminates data exfiltration risks by hosting models on-premise (via LM Studio, Ollama, or vLLM).
-- **Centralized MCP Knowledge Graph**: Autonomous tool execution for semantic graph lookup (`semantic_search`, `get_wiki`, `create_atom`).
-- **Technical Document Ingestion**: Converts complex industrial PDF documentation into graph atoms on the fly.
-- **Academic Grounding**: Automatically extracts domain concepts and correlates findings with live Google Scholar literature.
-- **Dynamic Research Coverage & Synthesis**: Visualizes literature density with interactive charts and performs instant client-side LexRank extractive summarization.
-- **Deterministic Report Generation**: Compiles executive summaries and verified mathematical calculations into downloadable Word (`.docx`) collateral.
+### The problem → our solution
+
+| Problem | Our approach |
+|:--|:--|
+| Cloud LLMs risk exposing confidential plant data | Local inference via LM Studio / Ollama / vLLM |
+| Technical PDFs are unsearchable silos | PDF → Knowledge Graph "atoms" ingestion pipeline |
+| LLM answers are hard to trust in safety-critical settings | Auditable execution trace + academic grounding via Google Scholar |
+| Engineers need deliverables, not chat logs | One-click Word (`.docx`) report generation |
+
+---
+
+## ✨ Key Features
+
+- 🔒 **Sovereign Local Inference**: any OpenAI-compatible endpoint, hosted on-premise, with zero data exfiltration.
+- 🤖 **Agentic Tool Calling**: a LangChain / LangGraph ReAct agent that autonomously chooses and calls tools.
+- 🕸️ **MCP Knowledge Graph Interface**: `semantic_search`, `get_wiki` and `create_atom` over a JSON-RPC MCP client.
+- 📄 **Technical Document Ingestion**: multi-page PDF → clean markdown → graph atoms (`pypdf`).
+- 🎓 **Academic Grounding**: extracts domain keywords and correlates them with live Google Scholar literature (SerpAPI).
+- 📊 **Research Coverage Chart**: an interactive SVG visualization of literature density per keyword.
+- ✂️ **LexRank Summaries**: extractive summaries of cited papers (Trafilatura + Sumy + NLTK).
+- 🧾 **Deterministic Report Generation**: executive summaries and verified calculations exported to `.docx`.
+- 🔍 **Auditable Execution Trace**: step-by-step chain-of-thought and tool-call logs, viewable in the UI.
+- 🛟 **Air-Gapped Fallback Mode**: the app keeps working (heuristic concept extraction + Scholar retrieval) even if no LLM server is running.
 
 ---
 
@@ -64,240 +98,279 @@ graph TD
     Docx -->|Report Generation| API
 ```
 
----
+### Request flow
 
-## ✨ Core Capabilities
-
-| Capability | Technical Mechanism | Industrial Value |
-| :--- | :--- | :--- |
-| **Air-Gapped Sovereign AI** | Open-weight models deployed locally via LM Studio / Ollama | Zero confidential data leaves internal perimeter |
-| **Agentic Tool Calling** | LangChain / LangGraph ReAct orchestration | Autonomous query resolution and tool routing |
-| **Knowledge Graph Interface** | Model Context Protocol (MCP) JSON-RPC client | Structured entity search and cross-linking across plant assets |
-| **Automated Collateral Ingestion** | Asynchronous multi-page PDF ingestion (`pypdf`) | Converts standard operating procedures into queryable graph nodes |
-| **Research Grounding** | Concurrent SerpAPI Scholar querying + LexRank | Validates engineering decisions against peer-reviewed literature |
-| **Auditable Execution Trace** | Granular chain-of-thought and tool step logging | Transparent verification of reasoning before plant deployment |
+1. The operator authenticates and receives an isolated session token.
+2. A natural-language query goes to `POST /agent/query`.
+3. The LangGraph agent plans, calls MCP tools against the Knowledge Graph, and reasons with the local LLM.
+4. Domain keywords are extracted and sent to Google Scholar for literature grounding.
+5. The UI renders the answer, the execution trace, the research chart and paper cards.
 
 ---
 
 ## 🛠 Technology Stack
 
-- **Frontend**: React 19, TypeScript, Vite, Vanilla CSS with custom glassmorphic styling, responsive SVG data visualization.
-- **Backend**: Python 3.11+, FastAPI, Uvicorn, AsyncIO, AIOHTTP.
-- **Agentic Framework**: LangChain, LangGraph (`create_agent`), LangChain OpenAI.
-- **Document Processing**: PyPDF, Python-docx, Trafilatura, Sumy, NLTK.
-- **Containerization**: Docker, Docker Compose, Nginx.
+| Layer | Technologies |
+|:--|:--|
+| **Frontend** | React 19, TypeScript, Vite, custom glassmorphic CSS, responsive SVG data visualization |
+| **Backend** | Python 3.11+, FastAPI, Uvicorn, AsyncIO, AIOHTTP |
+| **Agentic framework** | LangChain, LangGraph (`create_agent`), LangChain-OpenAI |
+| **Knowledge layer** | Model Context Protocol (MCP), Atomic Knowledge Graph |
+| **Document / NLP** | PyPDF, python-docx, Trafilatura, Sumy (LexRank), NLTK |
+| **Inference** | LM Studio, Ollama, vLLM (Qwen 2.5, DeepSeek, Llama 3) |
+| **DevOps** | Docker, Docker Compose, Nginx |
 
 ---
 
-## 🚀 How to Run the Application
+## 📁 Project Structure
 
-You can run the workbench either **Locally (Bare Metal)** or with **Docker Compose**.
-
----
-
-### Method 1: Local Development (Bare Metal)
-
-#### Prerequisites
-- **Node.js**: `v18+` or `v20+` (Run `node -v` to verify)
-- **Python**: `3.10+` or `3.11+` (Run `python --version` to verify)
-
-#### Step 1: Start the Backend (Terminal 1)
-
-1. Open PowerShell / Command Prompt and navigate to the backend:
-   ```powershell
-   cd "d:\Vaibhav Programs\Mini-Project 2\micromax\backend"
-   ```
-
-2. Create and activate a Python virtual environment:
-   ```powershell
-   # Windows (PowerShell)
-   python -m venv venv
-   .\venv\Scripts\activate
-
-   # If PowerShell shows script execution policy error:
-   # Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   # .\venv\Scripts\activate
-   ```
-
-3. Install backend dependencies:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-4. Verify your environment file:
-   The backend already includes a pre-configured `.env` file. You can inspect or modify it:
-   ```powershell
-   # backend/.env contains LLM, MCP, and port configuration
-   ```
-
-5. Launch the backend API server:
-   ```powershell
-   python main.py
-   ```
-   *The backend will start on **`http://localhost:8000`**.*  
-   *Interactive API documentation is available at **`http://localhost:8000/docs`**.*
+```text
+sovereign-industrial-workbench/
+├── backend/               # FastAPI gateway, agent engine, ingestion & summarization pipelines
+│   ├── main.py            # Application entry point
+│   ├── requirements.txt   # Python dependencies
+│   └── .env               # LLM / MCP / port configuration (create from the table below)
+├── frontend/              # React 19 + Vite single-page operator console
+├── docker-compose.yml     # One-command full-stack deployment
+├── .gitignore
+└── README.md
+```
 
 ---
 
-#### Step 2: Start the Frontend (Terminal 2)
+## 🚀 Quick Start
 
-1. Open a **second** terminal window and navigate to the frontend:
-   ```powershell
-   cd "d:\Vaibhav Programs\Mini-Project 2\micromax\frontend"
-   ```
+### Prerequisites
 
-2. Install Node dependencies:
-   ```powershell
-   npm install
-   ```
+- **Node.js** v18 or newer
+- **Python** 3.10 or newer (3.11+ recommended)
+- A local LLM runtime ([LM Studio](https://lmstudio.ai/) or [Ollama](https://ollama.com/)), see [Connecting Your LLM](#-connecting-your-llm)
+- A running **MCP Knowledge Graph server** (default `http://localhost:8080/mcp`)
+- *Optional:* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-3. Start the Vite development server:
-   ```powershell
-   npm run dev
-   ```
+### Clone the repository
 
-4. Open your web browser and navigate to:
-   ```
-   http://localhost:5173
-   ```
+```bash
+git clone https://github.com/vaibhav7549/sovereign-industrial-workbench.git
+cd sovereign-industrial-workbench
+```
+
+### Method 1: Local development
+
+**Terminal 1: Backend**
+
+```bash
+cd backend
+
+# Create and activate a virtual environment
+python -m venv venv
+# Windows (PowerShell)
+.\venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+python main.py
+```
+
+- API: `http://localhost:8000`
+- Interactive docs (Swagger): `http://localhost:8000/docs`
+
+> **Windows tip:** if PowerShell blocks activation, run
+> `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first.
+
+**Terminal 2: Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173** in your browser.
+
+### Method 2: Docker Compose
+
+```bash
+docker compose up --build
+```
+
+| Service | URL |
+|:--|:--|
+| Frontend UI | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| Swagger docs | http://localhost:8000/docs |
+
+```bash
+docker compose down   # stop everything
+```
 
 ---
 
-### Method 2: Running with Docker Compose
+## 🧠 Connecting Your LLM
 
-If you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed, you can build and run both frontend and backend with a single command:
+The backend works with **any OpenAI-compatible endpoint**, configured in `backend/.env`.
 
-1. In the project root directory, run:
-   ```bash
-   docker compose up --build
-   ```
+<details open>
+<summary><b>Option A: LM Studio (GUI, recommended on Windows)</b></summary>
 
-2. Access the services:
-   - **Frontend UI**: `http://localhost:5173`
-   - **Backend API**: `http://localhost:8000`
-   - **Swagger Docs**: `http://localhost:8000/docs`
+1. Install LM Studio and download a model, e.g. `Qwen2.5-7B-Instruct-GGUF` or `DeepSeek-R1-Distill-Qwen-7B`.
+2. Open the **Developer / Local Server** tab and click **Start Server** on port `1234`.
+3. Configure:
 
-3. To shut down the containers:
-   ```bash
-   docker compose down
-   ```
+```env
+LLM_BASE_URL=http://localhost:1234/v1
+LLM_MODEL=qwen2.5-7b-instruct-1m
+LLM_API_KEY=1234
+```
+</details>
 
----
+<details>
+<summary><b>Option B: Ollama (command line)</b></summary>
 
-## 🧠 Connecting Your LLM (Inference Options)
+```bash
+ollama run qwen2.5:7b
+```
 
-The workbench supports any OpenAI-compatible API endpoint via `backend/.env`:
+```env
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen2.5:7b
+LLM_API_KEY=ollama
+```
+</details>
 
-### Option A: LM Studio (Recommended for Windows GUI)
-1. Download and open [LM Studio](https://lmstudio.ai/).
-2. Search and download an open-weight model (e.g. `Qwen2.5-7B-Instruct-GGUF` or `DeepSeek-R1-Distill-Qwen-7B`).
-3. Click the **Developer / Local Server** tab (<-> icon).
-4. Select your loaded model and click **Start Server** on port `1234`.
-5. In `backend/.env`, set:
-   ```env
-   LLM_BASE_URL=http://localhost:1234/v1
-   LLM_MODEL=qwen2.5-7b-instruct-1m
-   LLM_API_KEY=1234
-   ```
+<details>
+<summary><b>Option C: Hosted provider (OpenAI / Groq / OpenRouter), only where policy allows</b></summary>
 
-### Option B: Ollama (Recommended for Command-Line)
-1. Install [Ollama](https://ollama.com/) and run:
-   ```bash
-   ollama run qwen2.5:7b
-   ```
-2. In `backend/.env`, set:
-   ```env
-   LLM_BASE_URL=http://localhost:11434/v1
-   LLM_MODEL=qwen2.5:7b
-   LLM_API_KEY=ollama
-   ```
-
-### Option C: Cloud Provider (OpenAI / Groq / OpenRouter)
-If cloud access is permitted, you can point to any hosted provider:
 ```env
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o-mini
-LLM_API_KEY=sk-your-openai-key-here
+LLM_API_KEY=<your-api-key>
 ```
 
-### Option D: Built-In Sovereign Air-Gapped Fallback
-If no local LLM server is active, **the application will not crash**. The backend automatically activates its **Sovereign Air-Gapped Fallback mode**: it parses query concepts heuristically, executes Google Scholar retrieval, and provides a clear status notice.
+> ⚠️ This breaks the air-gap guarantee. Use it for development and demos only.
+</details>
+
+<details>
+<summary><b>Option D: Built-in air-gapped fallback</b></summary>
+
+If no LLM server is reachable, the backend does **not** crash. It switches to **Sovereign Air-Gapped Fallback mode**: it extracts query concepts heuristically, runs Google Scholar retrieval, and shows a clear status notice in the UI.
+</details>
+
+> **Docker users:** containers cannot reach `localhost` on the host. Use `http://host.docker.internal:1234/v1` (LM Studio) or `:11434/v1` (Ollama), as set in `docker-compose.yml`.
 
 ---
 
-## 💡 Step-by-Step Feature Walkthrough
+## ⚙️ Configuration Reference
 
-Once both servers are running and you open `http://localhost:5173`:
+Create `backend/.env` with the following variables:
 
-1. **Authenticate Operator Session**:
-   - On the login screen, enter an Operator ID (e.g., `operator.v_88`).
-   - Click **Authenticate Session**. The backend issues an isolated clearance token.
-
-2. **Query the Knowledge Graph & Chat**:
-   - Type an industrial query in the bottom composer (e.g., *"What are the primary safety protocols for industrial catalytic hydrocrackers?"*).
-   - Click Send (or press Enter).
-   - Click **"View Execution Trace"** above the answer to inspect the agent's chain-of-thought and tool calls.
-
-3. **Explore Google Scholar Research Grounding**:
-   - Below the response, the interactive **Research Coverage Chart** plots academic literature density across keywords.
-   - In the right-hand panel, click any keyword pill under **RESEARCH PAPERS (SCHOLAR)** to expand paper cards.
-   - Hover over any paper to see live web-scraped previews.
-   - Click the ✨ Sparkle button on a paper to open the **LexRank Extractive Summary Modal**.
-
-4. **Ingest Technical Documents (PDF to KG Atom)**:
-   - Click **"Ingest Document"** in the left sidebar navigation.
-   - Select any technical PDF. The backend extracts text using `pypdf`, converts it into clean markdown sections, and pushes an atom into the centralized Knowledge Graph via MCP.
-
-5. **Diagnostic Sandbox Ping**:
-   - Click **"Diagnostic Ping"** in the left sidebar to test isolated backend tool routing and session security.
-
----
-
-## ⚙️ Configuration Reference (`backend/.env`)
-
-| Variable | Default Value | Description |
-| :--- | :--- | :--- |
+| Variable | Default | Description |
+|:--|:--|:--|
 | `HOST` | `0.0.0.0` | Backend host binding |
 | `PORT` | `8000` | Backend port |
-| `LLM_BASE_URL` | `http://localhost:1234/v1` | OpenAI-compatible endpoint (LM Studio / Ollama / vLLM) |
-| `LLM_MODEL` | `qwen2.5-7b-instruct-1m` | Open-weight model name loaded in local engine |
-| `LLM_API_KEY` | `1234` | API authorization key for inference endpoint |
-| `MCP_URL` | `http://localhost:8080/mcp` | Centralized Atomic Model Context Protocol server URL |
-| `MCP_AUTH_HEADER` | `Bearer at_aoUQ...` | Authorization token for MCP server |
-| `SERPAPI_KEY` | *(included demo key)* | SerpAPI key for Google Scholar academic search |
-| `VITE_API_URL` | `http://localhost:8000` | Frontend backend gateway URL |
+| `LLM_BASE_URL` | `http://localhost:1234/v1` | OpenAI-compatible inference endpoint |
+| `LLM_MODEL` | `qwen2.5-7b-instruct-1m` | Model name loaded in the local engine |
+| `LLM_API_KEY` | `1234` | API key for the inference endpoint |
+| `MCP_URL` | `http://localhost:8080/mcp` | Atomic Knowledge Graph MCP server URL |
+| `MCP_AUTH_HEADER` | `Bearer <your-mcp-token>` | Authorization header for the MCP server |
+| `SERPAPI_KEY` | `<your-serpapi-key>` | SerpAPI key for Google Scholar search |
+| `VITE_API_URL` | `http://localhost:8000` | Backend URL used by the frontend |
+
+> 🔐 **Security note:** never commit real tokens or API keys. Keep `.env` in `.gitignore` and rotate any key that has been pushed to a public repository.
 
 ---
 
-## 📡 Backend API Endpoints
+## 💡 Usage Walkthrough
+
+1. **Authenticate**: enter an Operator ID (e.g. `operator.v_88`) and click **Authenticate Session**.
+2. **Ask a question**: for example, *"What are the primary safety protocols for industrial catalytic hydrocrackers?"*. Open **View Execution Trace** to inspect the agent's reasoning and tool calls.
+3. **Explore research grounding**:
+   - Review the **Research Coverage Chart** under the answer.
+   - Expand keyword pills under **RESEARCH PAPERS (SCHOLAR)** in the right panel.
+   - Click ✨ on a paper to open the **LexRank extractive summary** modal.
+4. **Ingest a document**: choose **Ingest Document** in the sidebar and upload a technical PDF. It is parsed, converted to markdown and pushed into the Knowledge Graph as an atom via MCP.
+5. **Diagnostics**: use **Diagnostic Ping** to test sandboxed tool routing and session security.
+
+---
+
+## 📡 API Reference
 
 | Endpoint | Method | Purpose |
-| :--- | :--- | :--- |
-| `GET /` | `GET` | Health check, active model, and runtime endpoint status |
-| `POST /login` | `POST` | Authenticates operator username and issues session UUID |
-| `POST /agent/query` | `POST` | Agent reasoning loop, tool execution, and keyword extraction |
-| `POST /agent/summarize` | `POST` | Scrapes paper URLs and produces LexRank extractive summary |
-| `POST /agent/tool` | `POST` | Direct invocation of MCP Knowledge Graph tools |
-| `POST /ingest/pdf` | `POST` | Multipart PDF upload, text extraction, and MCP atom ingestion |
-| `POST /dummy_tool` | `POST` | Verifies air-gapped sandbox diagnostic routing |
+|:--|:--|:--|
+| `/` | `GET` | Health check, active model and runtime status |
+| `/login` | `POST` | Authenticates an operator and issues a session UUID |
+| `/agent/query` | `POST` | Agent reasoning loop, tool execution and keyword extraction |
+| `/agent/summarize` | `POST` | Scrapes a paper URL and returns a LexRank extractive summary |
+| `/agent/tool` | `POST` | Direct invocation of MCP Knowledge Graph tools |
+| `/ingest/pdf` | `POST` | Multipart PDF upload, text extraction and MCP atom ingestion |
+| `/dummy_tool` | `POST` | Air-gapped sandbox diagnostic routing check |
+
+Full interactive documentation is available at **`/docs`** once the backend is running.
 
 ---
 
-## 🔧 Troubleshooting FAQ
+## 🔧 Troubleshooting
 
-- **Port 8000 is already in use:**
-  Change `PORT=8001` in `backend/.env` and update `VITE_API_URL=http://localhost:8001` in `frontend/src/App.tsx`.
-- **PowerShell Script Execution Error:**
-  Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in your PowerShell window before activating the virtual environment.
-- **Docker cannot reach local LM Studio / Ollama:**
-  Ensure you use `http://host.docker.internal:1234/v1` (or `11434`) as defined in `docker-compose.yml` so Docker containers can communicate with the host machine.
-- **NLTK Tokenizer warnings:**
-  The backend automatically downloads missing `punkt` and `punkt_tab` datasets at startup and inside Docker.
+| Issue | Fix |
+|:--|:--|
+| **Port 8000 already in use** | Set `PORT=8001` in `backend/.env` and update `VITE_API_URL` in the frontend to match |
+| **PowerShell script execution error** | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
+| **Docker can't reach LM Studio / Ollama** | Use `host.docker.internal` instead of `localhost` in `LLM_BASE_URL` |
+| **NLTK tokenizer warnings** | The backend auto-downloads `punkt` and `punkt_tab` on startup |
+| **Agent returns fallback responses** | Confirm your LLM server is running and `LLM_BASE_URL` / `LLM_MODEL` are correct |
+| **No Knowledge Graph results** | Verify the MCP server is running at `MCP_URL` and the auth token is valid |
 
 ---
 
-## 👥 Author & Academic Citation
+## 🗺 Roadmap
 
-Developed for the project:  
-**Sovereign On-Premise Agentic AI Workbench using Open-Weight Multimodal LLMs for Confidential Industrial Work**  
-Created & Maintained by **Vaibhav Chaudhari** ([@vaibhav7549](https://github.com/vaibhav7549)).
+- [ ] Multimodal input (engineering drawings, P&ID diagrams, equipment photos)
+- [ ] Role-based access control per operator clearance
+- [ ] Offline academic corpus to remove the SerpAPI dependency
+- [ ] Persistent chat history and saved investigations
+- [ ] Evaluation benchmark for domain-specific answer accuracy
+
+---
+
+## 👥 Team
+
+**Mini Project**, Department of Information Technology
+**Walchand College of Engineering, Sangli**
+
+| Name | Roll No. |
+|:--|:--|
+| Ahaan Dhar | 246109020 |
+| Sharvaj Sandeep Fulgaonkar | 246109030 |
+| Vaibhav Krishna Chaudhari | 246109002 |
+
+Repository maintained by [Vaibhav Chaudhari](https://github.com/vaibhav7549).
+
+---
+
+## 📚 Citation
+
+If you reference this work, please cite it as:
+
+```text
+Dhar, A., Fulgaonkar, S. S., & Chaudhari, V. K. (2026).
+Sovereign On-Premise Agentic AI Workbench using Open-Weight Multimodal LLMs
+for Confidential Industrial Work. Mini Project, Department of Information
+Technology, Walchand College of Engineering, Sangli.
+```
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. Add a `LICENSE` file to the repository root so the license badge and terms resolve correctly.
+
+---
+
+<div align="center">
+
+**Built with ❤️ at Walchand College of Engineering, Sangli**
+
+⭐ Star this repo if you found it useful.
+
+</div>
