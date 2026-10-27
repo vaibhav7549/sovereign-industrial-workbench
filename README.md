@@ -25,18 +25,6 @@ The **Sovereign On-Premise Agentic AI Workbench** is an enterprise-grade, air-ga
 
 ---
 
-## 👥 Project Team
-
-**Department of Information Technology, Walchand College of Engineering, Sangli**
-
-| Name | Roll No. |
-| :--- | :--- |
-| Ahaan Dhar | 246109020 |
-| Sharvaj Sandeep Fulgaonkar | 246109030 |
-| Vaibhav Krishna Chaudhari | 246109002 |
-
----
-
 ## 🏗 System Architecture
 
 ```mermaid
@@ -305,6 +293,18 @@ Once both servers are running and you open `http://localhost:5173`:
   Ensure you use `http://host.docker.internal:1234/v1` (or `11434`) as defined in `docker-compose.yml` so Docker containers can communicate with the host machine.
 - **NLTK Tokenizer warnings:**
   The backend automatically downloads missing `punkt` and `punkt_tab` datasets at startup and inside Docker.
+
+---
+
+## 👥 Project Team
+
+**Department of Information Technology, Walchand College of Engineering, Sangli**
+
+| Name | Roll No. |
+| :--- | :--- |
+| Ahaan Dhar | 246109020 |
+| Sharvaj Sandeep Fulgaonkar | 246109030 |
+| Vaibhav Krishna Chaudhari | 246109002 |
 
 ---
 
