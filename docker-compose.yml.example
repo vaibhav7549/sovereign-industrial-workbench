@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sovereign-backend
+    network_mode: host
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LLM_BASE_URL=<llm base url> 
+      - LLM_MODEL=<ollama model>
+      - LLM_API_KEY=<llm api key>
+      - MCP_URL=http://localhost:8080/mcp
+      - MCP_AUTH_HEADER=Bearer <your MCP token>
+      - SERPAPI_KEY= <SERPAPI key>
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: sovereign-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
