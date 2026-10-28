@@ -22,6 +22,10 @@ RUN python -c "import nltk; nltk.download('punkt', quiet=True); nltk.download('p
 # Copy application files
 COPY . .
 
+# Persistent crypto state (sealed HE context, ciphertext vault, audit log) lives on a volume.
+RUN mkdir -p /data/he /data/audit && chmod 700 /data/he /data/audit
+VOLUME ["/data"]
+
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -10,3 +10,5 @@ venv/
 .gitignore
 .dockerignore
 .env
+data/
+*.enc

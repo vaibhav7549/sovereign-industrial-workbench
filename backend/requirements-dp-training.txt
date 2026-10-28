@@ -1,0 +1,7 @@
+# Optional: training-time differential privacy (DP-SGD) for fine-tuning experiments.
+# Not installed in the runtime image: torch adds ~1 GB and is not needed for
+# encrypted ingestion or search. Install on a training host:
+#   pip install -r requirements.txt -r requirements-dp-training.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.1
+opacus>=1.4.0

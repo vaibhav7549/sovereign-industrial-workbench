@@ -6,16 +6,64 @@ import uuid
 import tempfile
 import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
+from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 
 # Load configuration from .env file
 load_dotenv()
 
+log = logging.getLogger("sovereign.encryption")
+
+# ---------------------------------------------------------------------------
+# Encryption layer state (Option A: CKKS homomorphic search, Option C: DP)
+# ---------------------------------------------------------------------------
+ENCRYPTION_ENABLED = os.getenv("ENCRYPTION_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+EncryptedTensor = bytes  # a serialized TenSEAL CKKSVector (ciphertext only, no key material)
+
+secure_pipeline = None          # encryption.pipeline.SecurePipeline once initialised
+encryption_init_error: Optional[str] = None
+
+
+def _init_encryption_layer() -> None:
+    """Build the key ring, HE context, vault and audit log. Fails closed: on any
+    error encrypted endpoints answer 503 and nothing is ever stored in plaintext."""
+    global secure_pipeline, encryption_init_error
+    try:
+        from encryption.embedder import LocalEmbedder
+        from encryption.pipeline import EncryptionConfig, SecurePipeline
+
+        cfg = EncryptionConfig.from_env()
+        cfg.enabled = True
+        secure_pipeline = SecurePipeline.build(cfg, embed=LocalEmbedder.from_env(), mcp_call=call_mcp_tool)
+        encryption_init_error = None
+        log.warning("Encryption layer ready: HE context %s, DP epsilon=%s (%s)",
+                    secure_pipeline.holder.context_id, cfg.dp_epsilon,
+                    "enabled" if cfg.dp_enabled else "disabled")
+    except Exception as e:  # never log key material; the message is generic by construction
+        secure_pipeline = None
+        encryption_init_error = f"{type(e).__name__}: {e}"
+        log.error("Encryption layer NOT initialised: %s", encryption_init_error)
+
+
+def _require_pipeline():
+    if secure_pipeline is None:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Encryption is enabled but the encryption layer failed to start ({encryption_init_error}). "
+                   "Refusing to process documents in plaintext.",
+        )
+    return secure_pipeline
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Asynchronously initialize connection to centralized MCP server
     asyncio.create_task(mcp_initialize())
+    if ENCRYPTION_ENABLED:
+        # Context generation / unsealing is CPU-bound; keep the event loop free.
+        await asyncio.to_thread(_init_encryption_layer)
     yield
 
 app = FastAPI(
@@ -36,10 +84,11 @@ app.add_middleware(
 
 # Centralized Atomic MCP server configuration
 MCP_URL = os.getenv("MCP_URL", "http://localhost:8080/mcp")
-AUTH_HEADER = os.getenv("MCP_AUTH_HEADER", "Bearer at_aoUQcp-j1DfR8cbEDhY7pEEuBgSqn7e0Xf5qkWFE1lo")
+# Credentials come from the environment only (backend/.env or compose env_file), never from source.
+AUTH_HEADER = os.getenv("MCP_AUTH_HEADER", "")
 
 # Academic search & LLM configurations
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "70df7ca148311e422f45db74d365ff8bfcde7463435305070f6787156f4745cf")
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:1234/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5-7b-instruct-1m")
 LLM_API_KEY = os.getenv("LLM_API_KEY", "1234")
@@ -173,13 +222,143 @@ async def call_mcp_tool(tool_name: str, args: dict):
     
     return await mcp_send_request(payload)
 
+
+# ===========================================================================
+# Encryption API (Option A + Option C). Implementations live in ./encryption;
+# these are the stable entry points used by the endpoints and the agent tool.
+# ===========================================================================
+
+# 1. Homomorphic Encryption Setup
+def setup_homomorphic_context():
+    """Initialise (or unseal) the CKKS context used for encrypted semantic search.
+
+    N = 8192, coeff modulus [60, 40, 40, 60], scale 2^40, Galois + relinearisation
+    keys generated. The secret context is sealed with AES-256-GCM under a key
+    derived from ENCRYPTION_MASTER_KEY and written to HE_CONTEXT_FILE (TenSEAL
+    serialisation, not pickle). Returns the key holder; the matching
+    public-only evaluator context is available via .public_context_bytes().
+    """
+    from encryption.he import HEKeyHolder
+    from encryption.keys import KeyRing
+    from encryption.pipeline import EncryptionConfig
+
+    if secure_pipeline is not None:
+        return secure_pipeline.holder
+    cfg = EncryptionConfig.from_env()
+    holder, _created = HEKeyHolder.load_or_create(cfg.context_file, KeyRing.from_env(), cfg.he)
+    return holder
+
+
+# 2. Encrypt Embeddings (for storage)
+async def encrypt_embedding(embedding: List[float]) -> EncryptedTensor:
+    """Plaintext embedding -> serialized CKKS ciphertext (zero-padded to a power of two)."""
+    return await _require_pipeline().encrypt_embedding(embedding)
+
+
+# 3. Add Differential Privacy Noise
+async def add_differential_privacy_noise(embedding: List[float], epsilon: float = 1.0) -> List[float]:
+    """Laplace mechanism on one embedding (epsilon-local-DP, delta = 0).
+
+    The vector is L2-normalised/clipped to C = 1, so the L1 sensitivity is
+    2*sqrt(d) and the per-coordinate noise is Laplace(0, 2*sqrt(d)/epsilon).
+    The output is re-normalised (post-processing, no privacy cost).
+    Note: epsilon is the privacy-loss bound - for any two chunks x, x' the
+    probability of any output differs by at most a factor e^epsilon (2.72x at
+    epsilon = 1). It is not a "probability of distinguishing".
+    """
+    from encryption.dp import laplace_embedding
+
+    noisy, _params = laplace_embedding(embedding, epsilon)
+    return noisy.tolist()
+
+
+# 4. Encrypted Semantic Search
+async def semantic_search_encrypted(search_query: str, token: str) -> Dict:
+    """Search the encrypted knowledge base without decrypting stored embeddings.
+
+    query -> local embedding -> DP noise -> CKKS encrypt -> evaluator (public
+    context only) computes Enc(<q, d_i>) for every chunk -> key holder decrypts
+    the similarity scores -> top-K chunk text decrypted at the response boundary.
+    Atomic is not contacted during search, so it learns neither the query nor
+    which documents matched.
+    """
+    user = get_current_user(token)
+    pipeline = _require_pipeline()
+    return await pipeline.search(search_query, actor=user)
+
+
+# 5. Ingest Document with Encryption
+async def ingest_document_encrypted(file: UploadFile, token: str) -> Dict:
+    """PDF/text -> chunk -> embed -> DP noise -> CKKS encrypt -> vault, plus an
+    AES-GCM sealed envelope stored in Atomic. No plaintext reaches Atomic."""
+    user = get_current_user(token)
+    pipeline = _require_pipeline()
+    data = await file.read()
+    max_mb = int(os.getenv("MAX_UPLOAD_MB", "25"))
+    if len(data) > max_mb * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"file exceeds {max_mb} MB")
+    try:
+        return await pipeline.ingest(file.filename or "upload", data, actor=user)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+# 6. Differential Privacy for model training (optional, future fine-tuning)
+async def setup_privacy_engine(model, batch_size: int = 32, epsilon: float = 1.0, *,
+                               optimizer=None, data_loader=None, dataset=None,
+                               delta: Optional[float] = None, epochs: int = 1,
+                               max_grad_norm: float = 1.0) -> Dict:
+    """Attach Opacus DP-SGD (RDP accountant) to a training setup.
+
+    Pass either a DataLoader or a Dataset (a DataLoader with `batch_size` is
+    built). Sample rate = batch_size / len(dataset). Target delta defaults to
+    DP_DELTA (1e-5). Requires `pip install -r requirements-dp-training.txt`;
+    torch/opacus are deliberately not in the runtime image.
+    Note: full fine-tuning of Qwen2.5-3B is not feasible on 1 CPU / 3.9 GB RAM;
+    use this for small adapters/heads or on a training host.
+    """
+    from encryption.dp import setup_privacy_engine_sync
+
+    if optimizer is None:
+        raise ValueError("pass the optimizer (created after ModuleValidator.fix(model))")
+    if data_loader is None:
+        if dataset is None:
+            raise ValueError("pass data_loader or dataset")
+        from torch.utils.data import DataLoader
+
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    delta = float(os.getenv("DP_DELTA", "1e-5")) if delta is None else delta
+    return await asyncio.to_thread(setup_privacy_engine_sync, model, optimizer, data_loader,
+                                   epsilon, delta, epochs, max_grad_norm)
+
+
+# 7. Decrypt Results (server-side, at the user boundary only)
+async def decrypt_result(encrypted_result: EncryptedTensor, context=None) -> List[float]:
+    """Decrypt a final result ciphertext with the key holder and audit the event.
+    `context` may be the HEKeyHolder from setup_homomorphic_context(); defaults to
+    the running pipeline's key holder. Intermediate ciphertexts are never passed here."""
+    pipeline = _require_pipeline()
+    holder = context or pipeline.holder
+    values = await asyncio.to_thread(holder.decrypt_vector, encrypted_result)
+    import hashlib
+    pipeline.audit.log("decrypt_result", actor="api", values=len(values),
+                       ct_sha256=hashlib.sha256(encrypted_result).hexdigest()[:16])
+    return values
+
+
+# MCP tools that would write plaintext into Atomic and so bypass the encryption layer.
+_PLAINTEXT_WRITE_TOOLS = {"create_atom", "update_atom", "edit_atom", "ingest_url"}
+
+
 @app.get("/")
 def read_root():
     return {
         "status": "Sovereign Industrial Agent Backend is active",
         "llm_endpoint": LLM_BASE_URL,
         "llm_model": LLM_MODEL,
-        "mcp_url": MCP_URL
+        "mcp_url": MCP_URL,
+        "encryption_enabled": ENCRYPTION_ENABLED,
+        "encryption_ready": secure_pipeline is not None,
     }
 
 @app.post("/login")
@@ -255,8 +434,62 @@ async def query_agent(query: str, token: str):
         except Exception as e:
             return f"Failed to generate Word document: {str(e)}. (Ensure python-docx is installed)"
 
-    tools = [semantic_search_tool, get_wiki_tool, generate_word_report_tool]
-    
+    @tool
+    async def semantic_search_encrypted_tool(search_query: str) -> str:
+        """Searches the ENCRYPTED industrial knowledge base using homomorphic encryption.
+
+        The query is embedded locally, noised with differential privacy, encrypted with CKKS,
+        and compared against encrypted document embeddings without decrypting them. Only the
+        top results are decrypted, here at the response boundary. The knowledge-graph server
+        never sees the query or any plaintext. Input should be a search query.
+        Returns: [{"atom_id": "...", "score": 0.95, "preview": "...", "title": "...", "page": 3}]
+        """
+        try:
+            res = await secure_pipeline.search(search_query, actor=user)
+        except Exception as e:
+            return json.dumps({"error": f"encrypted search failed: {type(e).__name__}"})
+        return json.dumps([
+            {"atom_id": r["atom_id"], "score": r["score"], "preview": r["preview"],
+             "title": r["title"], "page": r["page"]}
+            for r in res["results"]
+        ])
+
+    encrypted_mode = ENCRYPTION_ENABLED and secure_pipeline is not None
+    if ENCRYPTION_ENABLED and not encrypted_mode:
+        raise HTTPException(status_code=503, detail=f"Encryption layer unavailable ({encryption_init_error})")
+
+    if encrypted_mode:
+        # Atomic's plaintext semantic_search is replaced: encrypted atoms are opaque to it.
+        tools = [semantic_search_encrypted_tool, get_wiki_tool, generate_word_report_tool]
+    else:
+        tools = [semantic_search_tool, get_wiki_tool, generate_word_report_tool]
+
+    # Encrypted retrieval runs first, so small local models are always grounded in
+    # the encrypted knowledge base even if they do not call the tool themselves.
+    encrypted_search_summary = None
+    agent_input = query
+    if encrypted_mode:
+        try:
+            pre = await secure_pipeline.search(query, actor=user)
+            encrypted_search_summary = {
+                "searched_chunks": pre["searched_chunks"],
+                "timings_ms": pre["timings_ms"],
+                "dp": pre.get("dp"),
+                "results": [{k: r[k] for k in ("atom_id", "doc_id", "title", "page", "score", "preview")}
+                            for r in pre["results"]],
+            }
+            if pre["results"]:
+                context_block = "\n\n".join(
+                    f"[{i + 1}] {r['title']} (page {r['page']}, atom {r['atom_id']}, score {r['score']}):\n{r['text']}"
+                    for i, r in enumerate(pre["results"])
+                )
+                agent_input = (
+                    "Context retrieved from the encrypted knowledge base (decrypted for you only; cite as [n]):\n"
+                    f"{context_block}\n\nOperator question: {query}"
+                )
+        except Exception as e:
+            encrypted_search_summary = {"error": f"encrypted search failed: {type(e).__name__}: {e}"}
+
     base_url = os.getenv("LLM_BASE_URL", LLM_BASE_URL)
     model_name = os.getenv("LLM_MODEL", LLM_MODEL)
     api_key = os.getenv("LLM_API_KEY", LLM_API_KEY)
@@ -279,7 +512,7 @@ async def query_agent(query: str, token: str):
         )
         
         # Run agent asynchronously
-        res = await agent.ainvoke({"messages": [("user", query)]})
+        res = await agent.ainvoke({"messages": [("user", agent_input)]})
         response_text = res["messages"][-1].content
         
         # Build thinking and execution trace
@@ -346,18 +579,40 @@ async def query_agent(query: str, token: str):
         except Exception as fallback_err:
             print("Scholar search error during fallback:", fallback_err)
     
-    return {
+    response = {
         "user": user,
         "query": query,
         "agent_response": response_text,
         "agent_thinking": thinking_text,
         "scholar_results": scholar_results
     }
+    if encrypted_mode:
+        response["encrypted_search"] = encrypted_search_summary
+    return response
+
+
+@app.post("/agent/verify-encryption")
+async def verify_encryption(token: str):
+    """Report encryption status, DP budget, encrypted-atom counts and audit-chain integrity."""
+    get_current_user(token)
+    if not ENCRYPTION_ENABLED:
+        return {"encryption_status": "disabled", "dp_epsilon": None, "atoms_encrypted": 0,
+                "note": "Set ENCRYPTION_ENABLED=true to encrypt new ingestions."}
+    if secure_pipeline is None:
+        return {"encryption_status": "error", "error": encryption_init_error}
+    return await asyncio.to_thread(secure_pipeline.status)
+
 
 @app.post("/agent/tool")
 async def direct_tool_call(tool_name: str, args: dict, token: str):
     # Direct access to the centralized KG through tools.
     user = get_current_user(token)
+    if ENCRYPTION_ENABLED and tool_name in _PLAINTEXT_WRITE_TOOLS:
+        raise HTTPException(
+            status_code=403,
+            detail=f"'{tool_name}' would write plaintext into the knowledge graph and is disabled while "
+                   "ENCRYPTION_ENABLED=true. Use POST /ingest/pdf instead.",
+        )
     result = await call_mcp_tool(tool_name, args)
     return result
 
@@ -365,7 +620,10 @@ async def direct_tool_call(tool_name: str, args: dict, token: str):
 async def ingest_pdf(file: UploadFile = File(...), token: str = ""):
     if not token or token not in users:
         raise HTTPException(status_code=401, detail="Unauthorized")
-        
+
+    if ENCRYPTION_ENABLED:
+        return await ingest_document_encrypted(file, token)
+
     try:
         import pypdf
         import io
