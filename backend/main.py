@@ -213,15 +213,15 @@ async def query_agent(query: str, token: str):
         }
 
     @tool
-    async def semantic_search_tool(inner_query: str) -> str:
+    async def semantic_search_tool(search_query: str) -> str:
         """Searches the centralized industrial knowledge graph for relevant chunks of information. Input should be a search query."""
-        result = await call_mcp_tool("semantic_search", {"query": inner_query})
+        result = await call_mcp_tool("semantic_search", {"query": search_query})
         return json.dumps(result)
 
     @tool
-    async def get_wiki_tool(topic: str) -> str:
-        """Returns a synthesized overview of an engineering topic or industrial asset from the knowledge graph with citations."""
-        result = await call_mcp_tool("get_wiki", {"topic": topic})
+    async def get_wiki_tool(tag: str) -> str:
+        """Returns a synthesized wiki overview for a tag (a topic name such as "hydrocracking") from the knowledge graph with citations. Input is the tag name."""
+        result = await call_mcp_tool("get_wiki", {"tag": tag})
         return json.dumps(result)
 
     @tool
