@@ -13,6 +13,9 @@ trafilatura
 sumy
 nltk
 
+# --- Testing
+pytest>=7.0.0
+
 # --- Encryption layer (Option A: CKKS homomorphic search, Option C: differential privacy)
 tenseal>=0.3.13          # Homomorphic encryption (CKKS, Microsoft SEAL). Wheels for CPython 3.8-3.12
 numpy>=1.24.0            # Linear algebra for embeddings / DP noise

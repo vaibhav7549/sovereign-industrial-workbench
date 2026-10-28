@@ -7,15 +7,34 @@ services:
       dockerfile: Dockerfile
     container_name: sovereign-backend
     network_mode: host
+    # Secrets (MCP_AUTH_HEADER, SERPAPI_KEY, ENCRYPTION_MASTER_KEY) come from backend/.env,
+    # which is git-ignored and docker-ignored. They are deliberately NOT listed under
+    # `environment:` - an entry like ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY} would
+    # override the env_file value with an empty string when the shell variable is unset.
+    env_file:
+      - ./backend/.env
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - LLM_BASE_URL=<llm base url> 
-      - LLM_MODEL=<ollama model>
-      - LLM_API_KEY=<llm api key>
+      - LLM_BASE_URL=http://localhost:11434/v1
+      - LLM_MODEL=qwen2.5:3b
+      - LLM_API_KEY=ollama
       - MCP_URL=http://localhost:8080/mcp
-      - MCP_AUTH_HEADER=Bearer <your MCP token>
-      - SERPAPI_KEY= <SERPAPI key>
+      # --- Encryption layer ---
+      - ENCRYPTION_ENABLED=true
+      - ENCRYPTION_DATA_DIR=/data
+      - HE_CONTEXT_FILE=/data/he/he_context.enc
+      - HE_POLY_MODULUS_DEGREE=8192
+      - HE_COEFF_MOD_BIT_LENGTHS=[60, 40, 40, 60]
+      - HE_THREADS=1
+      - DIFFERENTIAL_PRIVACY_ENABLED=true
+      - DP_EPSILON=${DP_EPSILON:-1.0}
+      - DP_DELTA=1e-5
+      - EMBED_MODEL=nomic-embed-text
+    volumes:
+      # Named volume, not a file bind-mount: binding a host file that does not exist yet
+      # makes Docker create a *directory* at that path and context loading fails.
+      - sovereign-crypto:/data
     restart: unless-stopped
 
   frontend:
@@ -30,3 +49,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  # Holds the sealed CKKS context, the ciphertext vault and the audit log.
+  # Back it up together with ENCRYPTION_MASTER_KEY (stored separately).
+  sovereign-crypto:

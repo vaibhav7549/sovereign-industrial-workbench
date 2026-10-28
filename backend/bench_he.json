@@ -1,0 +1,80 @@
+{
+  "machine": {
+    "cpu": "x86_64",
+    "cores_visible": 2,
+    "affinity": 1,
+    "python": "3.13.18"
+  },
+  "tenseal_available": false,
+  "params": {
+    "scheme": "CKKS",
+    "library": "TenSEAL n/a (Microsoft SEAL)",
+    "poly_modulus_degree": 8192,
+    "coeff_mod_bit_sizes": [
+      60,
+      40,
+      40,
+      60
+    ],
+    "total_coeff_modulus_bits": 200,
+    "global_scale": "2^40",
+    "security_level": "128-bit (HomomorphicEncryption.org standard)",
+    "slots": 4096
+  },
+  "dim": 768,
+  "keygen_s": 0.0,
+  "public_context_bytes": 10,
+  "runs": [
+    {
+      "chunks": 25,
+      "plaintext_ms": 0.0204,
+      "encrypt_query_ms": 0.01,
+      "he_dot_ms": 0.07,
+      "decrypt_scores_ms": 0.01,
+      "he_total_ms": 0.08,
+      "he_ms_per_chunk": 0.0,
+      "max_abs_error": 6.245004513516506e-17,
+      "top5_identical": true,
+      "slowdown_x": 4
+    },
+    {
+      "chunks": 50,
+      "plaintext_ms": 0.0081,
+      "encrypt_query_ms": 0.0,
+      "he_dot_ms": 0.05,
+      "decrypt_scores_ms": 0.0,
+      "he_total_ms": 0.05,
+      "he_ms_per_chunk": 0.0,
+      "max_abs_error": 6.938893903907228e-17,
+      "top5_identical": true,
+      "slowdown_x": 6
+    },
+    {
+      "chunks": 100,
+      "plaintext_ms": 0.0175,
+      "encrypt_query_ms": 0.0,
+      "he_dot_ms": 0.12,
+      "decrypt_scores_ms": 0.01,
+      "he_total_ms": 0.13,
+      "he_ms_per_chunk": 0.0,
+      "max_abs_error": 6.938893903907228e-17,
+      "top5_identical": true,
+      "slowdown_x": 7
+    },
+    {
+      "chunks": 200,
+      "plaintext_ms": 0.0405,
+      "encrypt_query_ms": 0.0,
+      "he_dot_ms": 0.27,
+      "decrypt_scores_ms": 0.02,
+      "he_total_ms": 0.29,
+      "he_ms_per_chunk": 0.0,
+      "max_abs_error": 8.326672684688674e-17,
+      "top5_identical": true,
+      "slowdown_x": 7
+    }
+  ],
+  "encrypt_ms_per_chunk": 0.0,
+  "ciphertext_bytes_per_chunk": 6144,
+  "chunks_within_5s_budget": null
+}

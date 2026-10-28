@@ -288,8 +288,27 @@ Once both servers are running and you open `http://localhost:5173`:
 | `POST /agent/query` | `POST` | Agent reasoning loop, tool execution, and keyword extraction |
 | `POST /agent/summarize` | `POST` | Scrapes paper URLs and produces LexRank extractive summary |
 | `POST /agent/tool` | `POST` | Direct invocation of MCP Knowledge Graph tools |
-| `POST /ingest/pdf` | `POST` | Multipart PDF upload, text extraction, and MCP atom ingestion |
+| `POST /ingest/pdf` | `POST` | Multipart PDF/text upload. With encryption on: DP noise + CKKS + AES-GCM, then MCP atom ingestion |
+| `POST /agent/verify-encryption` | `POST` | Encryption status, DP epsilon, encrypted atom count, audit-chain integrity |
 | `POST /dummy_tool` | `POST` | Verifies air-gapped sandbox diagnostic routing |
+
+---
+
+## 🔐 Encryption Layer (CKKS Homomorphic Search + Differential Privacy)
+
+With `ENCRYPTION_ENABLED=true`, nothing readable reaches the Atomic knowledge graph:
+
+- **Ingestion** (`POST /ingest/pdf`): text → page-aware chunks → local embeddings (`nomic-embed-text`) → Laplace DP noise → **CKKS encryption** (TenSEAL, N=8192). Chunk text and titles are sealed with **AES-256-GCM** before they are sent to Atomic.
+- **Search** (`semantic_search_encrypted` tool, also run automatically inside `POST /agent/query`): the query is embedded, noised and CKKS-encrypted. An evaluator holding only the *public* context computes encrypted similarity scores. Only the top-K results are decrypted, at the response boundary. Atomic is not contacted during search.
+- **Audit**: an HMAC-chained JSONL log of every encrypt, compute and decrypt event, with no plaintext. `POST /agent/verify-encryption?token=…` reports status, counts and chain integrity.
+
+Setup:
+1. Use Python 3.11 (TenSEAL has no 3.13 wheels) and `pip install -r backend/requirements.txt`.
+2. Generate a key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Put it in `backend/.env` as `ENCRYPTION_MASTER_KEY=…` and back it up offline. Losing it makes every encrypted document unrecoverable.
+3. Run `ollama pull nomic-embed-text`.
+4. **Choose `DP_EPSILON` deliberately.** At 1.0, search quality is no better than random. See [`docs/ENCRYPTION_SECURITY_REPORT.md`](docs/ENCRYPTION_SECURITY_REPORT.md) §6.
+
+Tests: `cd backend && python -m pytest -q tests`. Benchmark: `taskset -c 0 python scripts/bench_he_latency.py`.
 
 ---
 

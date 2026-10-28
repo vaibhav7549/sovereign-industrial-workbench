@@ -1,10 +1,17 @@
+#!/usr/bin/env python3
 """Benchmark encrypted vs plaintext similarity search (CKKS, TenSEAL).
 
-    taskset -c 0 python scripts/bench_he_latency.py --chunks 25 50 100 200 --json-out bench.json
+    taskset -c 0 python3 scripts/bench_he_latency.py --chunks 25 50 100 200 --json-out bench.json
 
 Pins TenSEAL to one thread (HE_THREADS=1) to match the 1-core deployment target.
 Reports per-stage latency, ciphertext size, numerical error vs plaintext and
 top-5 ranking agreement.
+
+If TenSEAL is not installed (e.g. Python 3.13 has no wheel yet — install
+Python 3.11 and run again), the script falls back to a numpy stand-in so
+the scaffolding and output format can still be verified.  The numpy numbers
+are orders of magnitude faster than real CKKS; they are labelled clearly so
+they cannot be mistaken for real measurements.
 """
 
 from __future__ import annotations
@@ -22,6 +29,42 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from encryption.he import HEEvaluator, HEKeyHolder, HEParams  # noqa: E402
 
+# ---------------------------------------------------------------------------
+# Numpy fallback — used when TenSEAL is not installed.
+# Numbers are much faster than real CKKS; clearly labelled in output.
+# ---------------------------------------------------------------------------
+try:
+    import tenseal as _ts_check  # noqa: F401
+    _HAVE_TENSEAL = True
+except ImportError:
+    _HAVE_TENSEAL = False
+
+
+class _NumpyHolder:
+    """Drop-in stand-in for HEKeyHolder with plaintext numpy math."""
+    context_id = "numpy-stub"
+
+    def __init__(self, params):
+        self.params = params
+
+    def encrypt(self, vec):
+        return np.asarray(vec, dtype=np.float64).tobytes()
+
+    def decrypt_scores(self, encs):
+        return [float(e) for e in encs]
+
+    def public_context_bytes(self):
+        return b"numpy-stub"
+
+
+class _NumpyEvaluator:
+    def load(self, b):
+        return np.frombuffer(b, dtype=np.float64)
+
+    def dot_many(self, q_bytes, docs):
+        qv = self.load(q_bytes)
+        return [float(d @ qv) for d in docs]
+
 
 def unit_rows(rng, n, d):
     m = rng.normal(size=(n, d))
@@ -37,17 +80,29 @@ def main():
     a = ap.parse_args()
 
     params = HEParams(n_threads=1)
-    t = time.perf_counter()
-    holder = HEKeyHolder.create(params)
-    keygen_s = time.perf_counter() - t
-    ev = HEEvaluator(holder.public_context_bytes(), n_threads=1)
+
+    if not _HAVE_TENSEAL:
+        print("WARNING: tenseal not installed — using numpy stand-in.")
+        print("         Numbers below are NOT real CKKS timings.")
+        print("         Install Python 3.11 + tenseal for real measurements.\n")
+        holder = _NumpyHolder(params)
+        ev = _NumpyEvaluator()
+        keygen_s = 0.0
+    else:
+        t = time.perf_counter()
+        holder = HEKeyHolder.create(params)
+        keygen_s = time.perf_counter() - t
+        ev = HEEvaluator(holder.public_context_bytes(), n_threads=1)
     rng = np.random.default_rng(42)
+    pub_bytes = holder.public_context_bytes()
     out = {"machine": {"cpu": platform.processor() or platform.machine(), "cores_visible": os.cpu_count(),
                        "affinity": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
                        "python": platform.python_version()},
+           "tenseal_available": _HAVE_TENSEAL,
            "params": params.describe(), "dim": a.dim, "keygen_s": round(keygen_s, 3),
-           "public_context_bytes": len(holder.public_context_bytes()), "runs": []}
-    print(json.dumps({k: out[k] for k in ("machine", "dim", "keygen_s", "public_context_bytes")}, indent=1))
+           "public_context_bytes": len(pub_bytes), "runs": []}
+    print(json.dumps({k: out[k] for k in ("machine", "tenseal_available", "dim", "keygen_s",
+                                           "public_context_bytes")}, indent=1))
 
     max_n = max(a.chunks)
     docs = unit_rows(rng, max_n, a.dim)
@@ -84,9 +139,17 @@ def main():
     out["ciphertext_bytes_per_chunk"] = int(ct_bytes)
     per = out["runs"][-1]["he_ms_per_chunk"]
     out["chunks_within_5s_budget"] = int(5000 / per) if per else None
-    print(f"\n=> about {out['chunks_within_5s_budget']} chunks fit a 5 s HE search budget on this machine")
+    if _HAVE_TENSEAL:
+        print(f"\n=> about {out['chunks_within_5s_budget']} chunks fit a 5 s HE search budget on this machine")
+    else:
+        print("\n=> numpy stand-in: numbers above are NOT real CKKS.")
+        print("   To get real timings: pip install tenseal  (requires Python 3.8-3.12)")
+        print("   Then re-run:  taskset -c 0 python3 scripts/bench_he_latency.py --json-out bench_he.json")
+        out["chunks_within_5s_budget"] = None
     if a.json_out:
-        json.dump(out, open(a.json_out, "w"), indent=2)
+        with open(a.json_out, "w") as f:
+            json.dump(out, f, indent=2)
+        print(f"=> results written to {a.json_out}")
 
 
 if __name__ == "__main__":

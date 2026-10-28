@@ -14,12 +14,13 @@ files at rest and the evaluator are NOT trusted with plaintext.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Awaitable, Callable, List, Optional, Sequence
+from typing import Awaitable, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -93,6 +94,12 @@ class SecurePipeline:
         self.mcp_call = mcp_call
         self.rng = rng
         self._he_lock = asyncio.Lock()  # SEAL objects are not shared across threads concurrently
+        # LRU-style query embedding cache: avoids a ~150 ms Ollama round-trip for repeated queries.
+        # Keyed by SHA-256 of the raw query string; bounded to _EMBED_CACHE_SIZE entries.
+        self._embed_cache: Dict[str, List[float]] = {}
+        self._embed_cache_order: List[str] = []
+
+    _EMBED_CACHE_SIZE = 256  # max cached query embeddings
 
     # ------------------------------------------------------------------ build
     @classmethod
@@ -106,7 +113,14 @@ class SecurePipeline:
         vault = EncryptedVault(cfg.vault_path, cache_max_bytes=cfg.cache_max_mb * 1024 * 1024)
         audit.log("he_context_created" if created else "he_context_loaded", actor="system",
                   he_context_id=holder.context_id, ms=t.ms, **{"params": cfg.he.describe()})
-        return cls(cfg, keys, holder, evaluator, vault, audit, embed, mcp_call)
+        pipeline = cls(cfg, keys, holder, evaluator, vault, audit, embed, mcp_call)
+        # Warm the ciphertext cache so the first query does not pay a cold-load penalty.
+        with Timer() as tw:
+            pipeline.warmup()
+        if vault.stats()["chunks_encrypted"] > 0:
+            audit.log("vault_cache_warmed", actor="system",
+                      chunks=vault.stats()["chunks_encrypted"], ms=tw.ms)
+        return pipeline
 
     # ------------------------------------------------------------- primitives
     def dp_noise(self, embedding: Sequence[float]) -> tuple[List[float], Optional[DPParams]]:
@@ -211,6 +225,29 @@ class SecurePipeline:
             },
         }
 
+    # -------------------------------------------------------- embed cache helpers
+    def _cache_get_embed(self, query: str) -> Optional[List[float]]:
+        return self._embed_cache.get(hashlib.sha256(query.encode()).hexdigest())
+
+    def _cache_put_embed(self, query: str, vec: List[float]) -> None:
+        key = hashlib.sha256(query.encode()).hexdigest()
+        if key not in self._embed_cache:
+            self._embed_cache_order.append(key)
+            if len(self._embed_cache_order) > self._EMBED_CACHE_SIZE:
+                evict = self._embed_cache_order.pop(0)
+                self._embed_cache.pop(evict, None)
+        self._embed_cache[key] = vec
+
+    def warmup(self) -> None:
+        """Pre-load all vault ciphertexts into the in-memory cache.
+
+        Call this once at startup (after build()) so the first real query
+        does not pay the cold-load penalty (SQLite reads + HMAC checks for
+        every chunk).  Safe to call multiple times; subsequent calls are cheap
+        because already-cached chunks are skipped.
+        """
+        self._load_encrypted_docs()
+
     # ----------------------------------------------------------------- search
     def _load_encrypted_docs(self):
         meta = self.vault.chunk_meta(self.holder.context_id)
@@ -229,9 +266,15 @@ class SecurePipeline:
     async def search(self, query: str, actor: str, top_k: Optional[int] = None) -> dict:
         top_k = top_k or self.cfg.top_k
         timings = {}
-        with Timer() as t:
-            q_emb = (await self.embed([query], "query"))[0]
-        timings["embed_query"] = t.ms
+        cached = self._cache_get_embed(query)
+        if cached is not None:
+            q_emb = cached
+            timings["embed_query"] = 0.0  # served from cache
+        else:
+            with Timer() as t:
+                q_emb = (await self.embed([query], "query"))[0]
+            timings["embed_query"] = t.ms
+            self._cache_put_embed(query, q_emb)
         apply_dp = self.cfg.dp_enabled and self.cfg.dp_apply_to_queries
         with Timer() as t:
             if apply_dp:

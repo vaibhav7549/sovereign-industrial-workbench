@@ -14,7 +14,8 @@ pytestmark = requires_tenseal
 
 @pytest.fixture(scope="module")
 def holder():
-    return HEKeyHolder.create(HEParams())
+    holder, _raw = HEKeyHolder.create(HEParams())
+    return holder
 
 
 def unit(rng, d=768):
