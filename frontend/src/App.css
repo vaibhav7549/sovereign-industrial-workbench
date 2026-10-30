@@ -1155,65 +1155,285 @@ em {
   100% { background-position: -200% 0; }
 }
 
-/* --- DEEPSEEK-STYLE DEEP RESEARCH (DEEPTHINK) TOGGLE BUTTON --- */
-.deepthink-toggle-pill {
+/* ==========================================================================
+   DEEPSEEK / MODERN LLM COMPOSER & ACTIONS TOOLBAR
+   ========================================================================== */
+.composer-card {
+  max-width: 840px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.composer-card:focus-within {
+  border-color: rgba(209, 73, 0, 0.5);
+  box-shadow: 0 6px 28px rgba(209, 73, 0, 0.1), 0 0 0 3px rgba(209, 73, 0, 0.06);
+}
+
+.composer-input-row {
+  padding: 12px 16px 4px;
+  width: 100%;
+}
+.composer-input-row textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.96rem;
+  resize: none;
+  min-height: 44px;
+  max-height: 220px;
+  outline: none;
+  line-height: 1.55;
+  color: var(--text-dark);
+  padding: 0;
+}
+.composer-input-row textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+.composer-input-row textarea::-webkit-scrollbar {
+  width: 5px;
+}
+.composer-input-row textarea::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 10px;
+  gap: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  background: #faf9f6;
+}
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 5px 10px;
-  border-radius: 18px;
-  border: 1px solid rgba(0, 0, 0, 0.14);
-  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 500;
   color: var(--text-dark);
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.toolbar-btn:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.22);
+  color: var(--accent-color);
+}
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
-  position: relative;
-  overflow: hidden;
-  margin-right: 4px;
 }
-
-.deepthink-toggle-pill:hover {
-  background: #f0f2f5;
-  border-color: rgba(0, 0, 0, 0.24);
+.deepthink-pill {
+  color: #444;
+}
+.deepthink-pill:hover:not(:disabled) {
+  border-color: #0b57d0;
+  color: #0b57d0;
+  background: #f0f4ff;
   transform: translateY(-1px);
 }
-
-.deepthink-toggle-pill.active {
-  background: linear-gradient(135deg, rgba(24, 144, 255, 0.12) 0%, rgba(9, 109, 217, 0.18) 100%);
-  border-color: #1890ff;
-  color: #003a8c;
-  box-shadow: 0 2px 10px rgba(24, 144, 255, 0.2);
+.deepthink-pill.active {
+  background: linear-gradient(135deg, #0b57d0 0%, #1e88e5 100%);
+  border-color: #0b57d0;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(11, 87, 208, 0.28);
+}
+.deepthink-pill.active .pill-icon {
+  color: #ffd166;
+  animation: sparkleRotate 2s infinite linear;
+}
+@keyframes sparkleRotate {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px #ffd166); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 6px #ffd166); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 2px #ffd166); }
 }
 
-.deepthink-toggle-pill.active .deepthink-sparkle {
-  color: #1890ff;
-  animation: pulse-glow 2s infinite ease-in-out;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #1890ff); }
-  50% { transform: scale(1.15); filter: drop-shadow(0 0 6px #1890ff); }
-}
-
-.deepthink-state {
+.pill-status {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  padding: 1px 5px;
+  font-size: 0.66rem;
+  padding: 1px 6px;
   border-radius: 10px;
   background: rgba(0,0,0,0.06);
   color: var(--text-muted);
-  transition: all 0.2s ease;
 }
-
-.deepthink-toggle-pill.active .deepthink-state {
-  background: #1890ff;
-  color: #fff;
+.deepthink-pill.active .pill-status {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   font-weight: 700;
 }
+
+.airgap-pill {
+  cursor: default;
+  background: rgba(47, 158, 68, 0.08);
+  border-color: rgba(47, 158, 68, 0.25);
+  color: #2f9e44;
+  font-size: 0.72rem;
+}
+.airgap-pill .airgap-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2f9e44;
+  box-shadow: 0 0 6px rgba(47, 158, 68, 0.6);
+}
+.airgap-pill.research-active {
+  background: rgba(11, 87, 208, 0.08);
+  border-color: rgba(11, 87, 208, 0.25);
+  color: #0b57d0;
+}
+.airgap-pill.research-active .airgap-dot {
+  background: #0b57d0;
+  box-shadow: 0 0 6px rgba(11, 87, 208, 0.6);
+}
+
+.send-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #e2dfd5;
+  color: #8c897f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+.send-action-btn.ready {
+  background: var(--accent-color);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(209, 73, 0, 0.3);
+}
+.send-action-btn.ready:hover {
+  transform: scale(1.06);
+  background: #b83d00;
+}
+.send-action-btn.ready:active {
+  transform: scale(0.94);
+}
+.char-counter {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.composer-footer-hints {
+  max-width: 840px;
+  margin: 8px auto 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* --- DEEPSEEK R1 THOUGHT DRAWER --- */
+.deepseek-thought-drawer {
+  margin-bottom: 14px;
+  background: #fcfbfa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.deepseek-thought-drawer:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+.thought-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  background: rgba(0, 0, 0, 0.02);
+}
+.thought-icon {
+  font-size: 0.95rem;
+}
+.thought-badge {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+}
+.thought-content {
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #555;
+  line-height: 1.6;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  white-space: pre-wrap;
+}
+
+/* --- PROMPT ONBOARDING CARD BADGES --- */
+.card-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.card:hover .card-badge {
+  background: rgba(209, 73, 0, 0.1);
+  color: var(--accent-color);
+}
+
 
 /* MODE BADGES ON MESSAGES */
 .mode-pill {
