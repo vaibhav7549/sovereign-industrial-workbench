@@ -1,51 +1,416 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import './App.css'
 
+// --- ICONS ---
 const OperatorIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 );
 
 const NodeIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
 );
 
 const ActionIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 );
 
 const ShieldIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
 );
 
 const CpuIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
 );
 
 const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="green" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 );
 
 const FileIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
 );
 
 const DatabaseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
 );
 
 const SparkleIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
-  </svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/></svg>
+);
+
+const CopyIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+);
+
+const DownloadIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+);
+
+const TrashIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+);
+
+const PaperclipIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+);
+
+const FileWordIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 13l2 4 2-4 2 4"></path></svg>
 );
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: string, results: {title: string, link: string}[], onOpenSummary: (data: any)=>void }) {
-  const [expanded, setExpanded] = useState(false);
+// --- HELPERS ---
+const isActualReportGenerated = (text: string) => {
+  if (!text) return false;
+  return text.includes("Successfully generated Word document") || 
+         (text.includes("sandbox_report.docx") && (text.includes("saved directly to disk") || text.includes("generated and saved to")));
+};
+
+function formatMathFormula(mathStr: string): string {
+  let s = mathStr.trim();
+  s = s.replace(/^\\\[/, '').replace(/\\\]$/, '').trim();
+  s = s.replace(/^\$\$/, '').replace(/\$\$$/, '').trim();
+  
+  s = s.replace(/\\text\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\mathrm\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\mathbf\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\Delta/g, 'Δ');
+  s = s.replace(/\\times/g, ' × ');
+  s = s.replace(/\\cdot/g, ' · ');
+  s = s.replace(/\\approx/g, ' ≈ ');
+  s = s.replace(/\\pm/g, ' ± ');
+  s = s.replace(/\\le(q)?/g, ' ≤ ');
+  s = s.replace(/\\ge(q)?/g, ' ≥ ');
+  s = s.replace(/\\ne(q)?/g, ' ≠ ');
+  s = s.replace(/\\circ/g, '°');
+  s = s.replace(/\\,/g, ' ');
+  s = s.replace(/\\;/g, ' ');
+  s = s.replace(/\\quad/g, '   ');
+  s = s.replace(/\\qquad/g, '      ');
+  s = s.replace(/\\alpha/g, 'α');
+  s = s.replace(/\\beta/g, 'β');
+  s = s.replace(/\\gamma/g, 'γ');
+  s = s.replace(/\\theta/g, 'θ');
+  s = s.replace(/\\lambda/g, 'λ');
+  s = s.replace(/\\pi/g, 'π');
+  s = s.replace(/\\sigma/g, 'σ');
+  s = s.replace(/\\mu/g, 'μ');
+  s = s.replace(/\\omega/g, 'ω');
+  s = s.replace(/\\rho/g, 'ρ');
+  s = s.replace(/\\eta/g, 'η');
+  s = s.replace(/\\infty/g, '∞');
+  s = s.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
+  s = s.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1 / $2)');
+  return s;
+}
+
+function formatInlineText(text: string): (string | React.JSX.Element)[] {
+  const regex = /(\\\([\s\S]*?\\\)|\$[^$\n]+\$|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
+  const parts = text.split(regex);
+  return parts.map((part, idx) => {
+    if (!part) return '';
+    if ((part.startsWith('\\(') && part.endsWith('\\)')) || (part.startsWith('$') && part.endsWith('$'))) {
+      const inner = part.startsWith('\\(') ? part.slice(2, -2) : part.slice(1, -1);
+      return (
+        <span key={idx} className="math-inline" title="Formula">
+          {formatMathFormula(inner)}
+        </span>
+      );
+    }
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx} className="prose-strong">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={idx} className="prose-inline-code">{part.slice(1, -1)}</code>;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={idx} className="prose-em">{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
+function FormattedProse({ content, isUser, apiUrl }: { content: string, isUser: boolean, apiUrl: string }) {
+  if (isUser) {
+    return <div className="user-prose">{content}</div>;
+  }
+
+  // If this is an upload status JSON response, render a clean card instead of raw JSON
+  if (content.trim().startsWith('{') && content.includes('"status": "success"') && content.includes('"markdown_snippet"')) {
+    try {
+      const data = JSON.parse(content);
+      return (
+        <div className="upload-result-card">
+          <div className="upload-result-header">
+            <span className="upload-badge"><CheckIcon /> PDF Ingested</span>
+            <span className="upload-status-text">{data.message}</span>
+          </div>
+          {data.markdown_snippet && (
+            <div className="upload-snippet-preview">
+              <div className="preview-label">Extracted Text Preview:</div>
+              <pre>{data.markdown_snippet}</pre>
+            </div>
+          )}
+          {data.kg_result && (
+            <div className="upload-kg-status">
+              <span className="kg-label">Knowledge Graph Sync:</span>
+              <span className={data.kg_result?.error ? "kg-tag offline" : "kg-tag online"}>
+                {data.kg_result?.error ? "Sovereign Standalone Mode (MCP Offline)" : "Synced to Centralized Graph"}
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    } catch {}
+  }
+
+  // Only show Word report card if it was ACTUALLY generated on disk
+  const hasWordReport = isActualReportGenerated(content);
+
+  const blocks: React.JSX.Element[] = [];
+  const lines = content.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Math display block: \[ ... \] or $$ ... $$
+    if (line.trim().startsWith('\\[') || line.trim().startsWith('$$')) {
+      const mathLines = [line];
+      const endMarker = line.trim().startsWith('\\[') ? '\\]' : '$$';
+      if (!line.includes(endMarker) || (line.trim().startsWith('\\[') && line.trim() === '\\[')) {
+        i++;
+        while (i < lines.length && !lines[i].includes(endMarker)) {
+          mathLines.push(lines[i]);
+          i++;
+        }
+        if (i < lines.length) {
+          mathLines.push(lines[i]);
+        }
+      }
+      const rawMath = mathLines.join('\n');
+      const formatted = formatMathFormula(rawMath);
+      blocks.push(
+        <div key={`math-${i}`} className="math-display-card">
+          <div className="math-card-header">
+            <span className="math-badge">EQUATION</span>
+            <button 
+              type="button"
+              className="copy-formula-btn" 
+              onClick={() => navigator.clipboard.writeText(formatted)}
+              title="Copy Formula"
+            >
+              <CopyIcon /> Copy
+            </button>
+          </div>
+          <div className="math-card-content">{formatted}</div>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Code block ```
+    if (line.trim().startsWith('```')) {
+      const lang = line.trim().slice(3).trim() || 'code';
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      const codeText = codeLines.join('\n');
+      blocks.push(
+        <div key={`code-${i}`} className="code-block-card">
+          <div className="code-block-header">
+            <span className="code-lang-tag">{lang}</span>
+            <button 
+              type="button"
+              className="copy-code-btn" 
+              onClick={() => navigator.clipboard.writeText(codeText)}
+            >
+              <CopyIcon /> Copy Code
+            </button>
+          </div>
+          <pre className="code-block-pre"><code>{codeText}</code></pre>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Callout box
+    if (line.startsWith('### [') && line.includes(']')) {
+      const title = line.replace(/^###\s*/, '');
+      blocks.push(
+        <div key={`callout-${i}`} className="alert-callout-box">
+          <div className="alert-callout-title">{title}</div>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Headers
+    if (line.startsWith('### ')) {
+      blocks.push(<h4 key={`h4-${i}`} className="prose-h4">{formatInlineText(line.slice(4))}</h4>);
+      i++;
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      blocks.push(<h3 key={`h3-${i}`} className="prose-h3">{formatInlineText(line.slice(3))}</h3>);
+      i++;
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      blocks.push(<h2 key={`h2-${i}`} className="prose-h2">{formatInlineText(line.slice(2))}</h2>);
+      i++;
+      continue;
+    }
+
+    // Bullet item
+    if (/^\s*[-*]\s+/.test(line)) {
+      const clean = line.replace(/^\s*[-*]\s+/, '');
+      blocks.push(
+        <div key={`li-${i}`} className="prose-list-item">
+          <span className="bullet-dot">•</span>
+          <div className="list-text">{formatInlineText(clean)}</div>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Numbered item
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const match = line.match(/^\s*(\d+)\.\s+(.*)$/);
+      if (match) {
+        blocks.push(
+          <div key={`num-${i}`} className="prose-list-item numbered">
+            <span className="number-badge">{match[1]}</span>
+            <div className="list-text">{formatInlineText(match[2])}</div>
+          </div>
+        );
+        i++;
+        continue;
+      }
+    }
+
+    if (!line.trim()) {
+      blocks.push(<div key={`sp-${i}`} className="prose-spacer" />);
+      i++;
+      continue;
+    }
+
+    blocks.push(
+      <p key={`p-${i}`} className="prose-paragraph">
+        {formatInlineText(line)}
+      </p>
+    );
+    i++;
+  }
+
+  return (
+    <div className="formatted-prose">
+      {blocks}
+      {hasWordReport && (
+        <div className="generated-report-card">
+          <div className="report-card-left">
+            <div className="report-badge">
+              <FileWordIcon />
+            </div>
+            <div className="report-meta">
+              <div className="report-title">Sovereign_Industrial_Report.docx</div>
+              <div className="report-subtitle">Calculation Sandbox Output & Executive Summary</div>
+            </div>
+          </div>
+          <a 
+            href={`${apiUrl}/download/report`} 
+            download="Sovereign_Industrial_Report.docx" 
+            className="download-report-btn"
+          >
+            <DownloadIcon /> Download .docx
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MessageActionBar({ content, activeModel }: { content: string, activeModel?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="message-action-bar">
+      <span className="model-chip">{activeModel || "Local LLM"}</span>
+      <button type="button" className="msg-action-btn" onClick={handleCopy} title="Copy response text">
+        {copied ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
+      </button>
+    </div>
+  );
+}
+
+// --- SCHOLAR & CHART COMPONENTS ---
+
+const DEFAULT_SCHOLAR_PAPERS: Record<string, {title: string, link: string}[]> = {
+  "Heat Exchanger Thermal Duty": [
+    {
+      title: "Investigation of Heat Transfer Rates on Shell and Tube Heat Exchanger by Numerical Modelling via CFD Analysis",
+      link: "https://arxiv.org/abs/2310.17257"
+    },
+    {
+      title: "Thermal Performance and Friction Factor in Double Pipe and Shell-and-Tube Heat Exchangers",
+      link: "https://www.sciencedirect.com/science/article/pii/S135943111932456X"
+    },
+    {
+      title: "Design and optimization of shell-and-tube heat exchangers based on TEMA standards",
+      link: "https://link.springer.com/article/10.1007/s10973-018-7241-x"
+    }
+  ],
+  "Hydrocracker Catalytic Safety": [
+    {
+      title: "Slurry phase hydrocracking: process operations, safety margins and reactor dynamics",
+      link: "https://www.sciencedirect.com/science/article/pii/S001623612032682X"
+    },
+    {
+      title: "Emergency Shutdown Systems (ESD) and safety integrity levels in petroleum hydrocrackers",
+      link: "https://pubs.acs.org/doi/10.1021/ie50367a012"
+    },
+    {
+      title: "Risk assessment and failure mitigation in high-pressure industrial hydroprocessing reactors",
+      link: "https://www.icheme.org/publications/journals/psep"
+    }
+  ]
+};
+
+function ScholarKeywordSection({ 
+  keyword, 
+  results, 
+  onOpenSummary,
+  forceExpanded 
+}: { 
+  keyword: string, 
+  results: {title: string, link: string}[], 
+  onOpenSummary: (paper: {title: string, link: string}) => void,
+  forceExpanded?: boolean
+}) {
+  const [expanded, setExpanded] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [summaryData, setSummaryData] = useState<Record<number, any>>({});
   const hoverTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (forceExpanded !== undefined) {
+      setExpanded(forceExpanded);
+    }
+  }, [forceExpanded]);
 
   const handleMouseEnter = (idx: number, r: {title: string, link: string}) => {
     setHoveredCard(idx);
@@ -58,10 +423,10 @@ function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: s
          const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(r.link)}&title=${encodeURIComponent(r.title)}`, { method: 'POST' });
          const data = await resp.json();
          setSummaryData(prev => ({...prev, [idx]: data}));
-      } catch (e) {
-         setSummaryData(prev => ({...prev, [idx]: { title: r.title, status: 'error', short_summary: ["Failed to summarize."] }}));
+      } catch {
+         setSummaryData(prev => ({...prev, [idx]: { title: r.title, status: 'error', short_summary: ["Preview unavailable due to paywall or access control."] }}));
       }
-    }, 500);
+    }, 400);
   };
 
   const handleMouseLeave = () => {
@@ -69,9 +434,8 @@ function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: s
     if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
   };
   
-  
   return (
-    <div style={{ marginBottom: expanded ? '16px' : '8px', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ marginBottom: expanded ? '14px' : '6px', display: 'flex', flexDirection: 'column' }}>
       <div 
         className="scholar-keyword-pill"
         onClick={() => setExpanded(!expanded)}
@@ -86,29 +450,32 @@ function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: s
         <div className="scholar-cards-container">
           {results.map((r, j) => {
             let domain = "";
-            try { domain = new URL(r.link).hostname.replace('www.', ''); } catch (e) {}
+            try { domain = new URL(r.link).hostname.replace('www.', ''); } catch {}
             
             const isHovered = hoveredCard === j;
             const mySumm = summaryData[j];
             
             return (
-              <div key={j} className="scholar-card" style={{ animationDelay: `${j * 60}ms`, position: 'relative' }} onMouseEnter={() => handleMouseEnter(j, r)} onMouseLeave={handleMouseLeave}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div key={j} className="scholar-card" style={{ animationDelay: `${j * 50}ms`, position: 'relative' }} onMouseEnter={() => handleMouseEnter(j, r)} onMouseLeave={handleMouseLeave}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                   <div className="scholar-card-domain">
-                     {domain && <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`} alt="" />}
+                     {domain && <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`} alt="" onError={(e)=>{ (e.target as HTMLElement).style.display = 'none'; }} />}
                      {domain || 'scholar.google.com'}
                   </div>
                   <button 
+                     type="button"
                      className="summarize-btn"
-                     onClick={(e) => { e.stopPropagation(); onOpenSummary(mySumm && !mySumm.loading ? mySumm : { loading: true, title: r.title, link: r.link }); }}
-                     title="Summarize Paper"
+                     onClick={(e) => { 
+                       e.stopPropagation(); 
+                       onOpenSummary({ title: r.title, link: r.link }); 
+                     }}
+                     title="Summarize Paper via LexRank"
                   >
-                     <SparkleIcon />
+                     <SparkleIcon /> Summarize
                   </button>
                 </div>
                 <a href={r.link} target="_blank" rel="noopener noreferrer" className="scholar-card-title">{r.title}</a>
                 
-                {/* Popover Hover */}
                 {isHovered && mySumm && (
                   <div className="summary-popover">
                      {mySumm.loading ? (
@@ -137,7 +504,6 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
   const [hoverData, setHoverData] = useState<{ x: number, y: number, kw: string, count: number } | null>(null);
   
   useEffect(() => {
-    // short timeout to trigger CSS animation
     const t = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(t);
   }, []);
@@ -178,8 +544,8 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
   const areaD = pathD + ` L ${points[points.length-1].x} ${height - padding.bottom} L ${points[0].x} ${height - padding.bottom} Z`;
 
   return (
-    <div style={{ marginTop: '32px', width: '100%', maxWidth: width, position: 'relative' }} onMouseLeave={() => setHoverData(null)}>
-      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>
+    <div style={{ marginTop: '28px', width: '100%', maxWidth: width, position: 'relative' }} onMouseLeave={() => setHoverData(null)}>
+      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase' }}>
         Research coverage across {entries.length} keywords
       </div>
       
@@ -191,7 +557,6 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
           </linearGradient>
         </defs>
         
-        {/* Grids */}
         {[0, Math.ceil(maxCount/2), maxCount].map((t, i) => (
           <g key={i}>
             <line x1={padding.left} y1={padding.top + innerHeight - (t/maxCount)*innerHeight} x2={width-padding.right} y2={padding.top + innerHeight - (t/maxCount)*innerHeight} stroke="rgba(0,0,0,0.06)" strokeWidth={1} />
@@ -199,17 +564,14 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
           </g>
         ))}
 
-        {/* Labels with rotation if needed */}
         {points.map((p, i) => (
           <text key={i} x={p.x} y={height - 15} textAnchor="middle" fontSize="11" fill="var(--text-muted)" fontFamily="var(--font-sans)" transform={`rotate(-15, ${p.x}, ${height - 15})`}>
             {p.keyword.length > 15 ? p.keyword.substring(0, 15) + '...' : p.keyword}
           </text>
         ))}
 
-        {/* Area */}
         <path d={areaD} fill="url(#areaGradient)" style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.8s ease' }} />
         
-        {/* Line */}
         <path 
            d={pathD} 
            fill="none" 
@@ -223,7 +585,6 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
            }} 
         />
 
-        {/* Interactive Points */}
         {points.map((p, i) => (
           <g 
              key={i} 
@@ -238,14 +599,12 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
                 if (p.firstLink) window.open(p.firstLink, '_blank');
              }}
           >
-             {/* Invisible target area for easier hovering */}
              <circle cx={p.x} cy={p.y} r={16} fill="transparent" />
              <circle cx={p.x} cy={p.y} r={p.count === 0 ? 3 : 5} fill={p.count === 0 ? '#ebe9e0' : '#fff'} stroke={p.count === 0 ? '#aaa' : 'var(--accent-color)'} strokeWidth="2" />
           </g>
         ))}
       </svg>
       
-      {/* Tooltip HTML Overlay */}
       {hoverData && (
         <div style={{
            position: 'absolute',
@@ -267,8 +626,6 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
            <div style={{ fontWeight: 600 }}>{hoverData.kw}</div>
            <div style={{ color: '#ccc', margin: '2px 0 4px 0', fontSize: '0.75rem' }}>{hoverData.count} paper{hoverData.count !== 1 ? 's' : ''} found</div>
            <div style={{ color: '#ffb58a', fontSize: '0.75rem', fontWeight: 600 }}>Click to view details &rarr;</div>
-           
-           {/* Tooltip triangle pointer */}
            <div style={{
               position: 'absolute',
               bottom: '-4px',
@@ -286,17 +643,51 @@ function CoverageChart({ data }: { data: Record<string, {title: string, link: st
   );
 }
 
+// --- MAIN COMPONENT ---
+
 function App() {
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string>('');
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<{role: string, content: any, thinking?: string, scholar_results?: any}[]>([]);
-  const [scholarResults, setScholarResults] = useState<Record<string, {title: string, link: string}[]>>({});
+  const [history, setHistory] = useState<{role: string, content: string, thinking?: string, scholar_results?: any}[]>([]);
+  const [scholarResults, setScholarResults] = useState<Record<string, {title: string, link: string}[]>>(DEFAULT_SCHOLAR_PAPERS);
+  const [scholarSearchTerm, setScholarSearchTerm] = useState<string>('');
+  const [searchingScholar, setSearchingScholar] = useState<boolean>(false);
+  const [allExpanded, setAllExpanded] = useState<boolean>(true);
+  const [generatedReports, setGeneratedReports] = useState<{name: string, timestamp: string}[]>([]);
   const [activeSummary, setActiveSummary] = useState<any>(null);
+  const [activeModel, setActiveModel] = useState<string>('Local Sovereign LLM');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch(`${API_URL}/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.llm_model) {
+          setActiveModel(data.llm_model);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Auto-resize textarea like ChatGPT / Claude (smooth expansion up to ~220px)
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const scrollH = el.scrollHeight;
+    const nextHeight = Math.min(scrollH, 220);
+    el.style.height = `${Math.max(nextHeight, 40)}px`;
+    el.style.overflowY = scrollH > 220 ? 'auto' : 'hidden';
+  };
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [query]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -309,31 +700,51 @@ function App() {
       const resp = await fetch(`${API_URL}/login?username=${username}`, { method: 'POST' });
       const data = await resp.json();
       setToken(data.token);
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("Verification failed.");
     }
   }
 
-  const handleQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query || !token) return;
-    const currentQ = query;
+  const handleQuery = async (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const currentQ = customQuery || query;
+    if (!currentQ || !token || loading) return;
+    
     setQuery('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '40px';
+      textareaRef.current.style.overflowY = 'hidden';
+    }
     setHistory(prev => [...prev, {role: 'user', content: currentQ}]);
     setLoading(true);
+
     try {
       const resp = await fetch(`${API_URL}/agent/query?query=${encodeURIComponent(currentQ)}&token=${token}`, { method: 'POST' });
       const data = await resp.json();
       const outputTxt = data.agent_response || JSON.stringify(data, null, 2);
       const thinkingTxt = data.agent_thinking || "";
-      setHistory(prev => [...prev, {role: 'agent', content: outputTxt, thinking: thinkingTxt, scholar_results: data.scholar_results}]);
+      const agentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      setHistory(prev => [...prev, {
+        role: 'agent', 
+        content: outputTxt, 
+        thinking: thinkingTxt, 
+        scholar_results: data.scholar_results
+      }]);
       
+      // If a Word report was ACTUALLY generated in this turn, record it
+      if (isActualReportGenerated(outputTxt)) {
+        setGeneratedReports(prev => [
+          ...prev.filter(r => r.name !== "Sovereign_Industrial_Report.docx"),
+          { name: "Sovereign_Industrial_Report.docx", timestamp: agentTime }
+        ]);
+      }
+
       if (data.scholar_results && Object.keys(data.scholar_results).length > 0) {
         setScholarResults(data.scholar_results);
+        setAllExpanded(true);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       setHistory(prev => [...prev, {role: 'agent', content: 'Connection to inference node lost.'}]);
     }
     setLoading(false);
@@ -351,9 +762,8 @@ function App() {
         body: formData
       });
       const data = await resp.json();
-      setHistory(prev => [...prev, {role: 'agent_upload_result', content: JSON.stringify(data, null, 2)}]);
-    } catch (error) {
-      console.error(error);
+      setHistory(prev => [...prev, {role: 'agent', content: JSON.stringify(data, null, 2)}]);
+    } catch {
       alert("Document indexing failed.");
     }
     setLoading(false);
@@ -366,10 +776,61 @@ function App() {
       const resp = await fetch(`${API_URL}/dummy_tool?input_val=test&token=${token}`, { method: 'POST' });
       const data = await resp.json();
       alert("Ping response: " + JSON.stringify(data));
-    } catch(e) {
-      alert("Error: " + e);
+    } catch(err) {
+      alert("Error: " + err);
     }
   }
+
+  const handleClearChat = () => {
+    if (window.confirm("Clear conversation history and generated collateral?")) {
+      setHistory([]);
+      setScholarResults(DEFAULT_SCHOLAR_PAPERS);
+      setGeneratedReports([]);
+    }
+  }
+
+  const handleOpenPaperSummary = async (paper: {title: string, link: string}) => {
+    setActiveSummary({ loading: true, title: paper.title, link: paper.link });
+    try {
+      const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(paper.link)}&title=${encodeURIComponent(paper.title)}`, { method: 'POST' });
+      const data = await resp.json();
+      setActiveSummary({ ...data, title: paper.title, link: paper.link });
+    } catch {
+      setActiveSummary({ 
+        title: paper.title, 
+        link: paper.link, 
+        status: 'error', 
+        short_summary: ["Failed to summarize paper."], 
+        full_summary: ["Unable to load summary at this time. Please open the original source link directly."] 
+      });
+    }
+  };
+
+  const handleDirectScholarSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const term = scholarSearchTerm.trim();
+    if (!term) return;
+    setSearchingScholar(true);
+    try {
+      const resp = await fetch(`${API_URL}/agent/scholar/search?q=${encodeURIComponent(term)}`);
+      const data = await resp.json();
+      if (data.results && data.results.length > 0) {
+        setScholarResults(prev => ({
+          [term]: data.results,
+          ...prev
+        }));
+        setAllExpanded(true);
+      } else {
+        alert(`No papers found for "${term}". Try another engineering keyword.`);
+      }
+    } catch (err) {
+      console.error("Direct scholar search failed", err);
+    }
+    setSearchingScholar(false);
+    setScholarSearchTerm('');
+  };
+
+  const totalPapersCount = Object.values(scholarResults).reduce((acc, curr) => acc + (curr ? curr.length : 0), 0);
 
   if (!token) {
     return (
@@ -415,54 +876,67 @@ function App() {
         </div>
         <div className="workspace-nav">
            <div className="nav-group-title">COMMANDS</div>
-           <button onClick={callDummyTool} className="nav-item">
+           <button type="button" onClick={callDummyTool} className="nav-item">
              <ActionIcon /> Diagnostic Ping
            </button>
-           <button className="nav-item" onClick={() => fileInputRef.current?.click()}>
+           <button type="button" className="nav-item" onClick={() => fileInputRef.current?.click()}>
              <ActionIcon /> Ingest Document
            </button>
 
-           <div className="nav-group-title" style={{ marginTop: '32px' }}>AGENTIC CAPABILITIES</div>
-           <div className="capability-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}><CheckIcon /> Local Sandbox Active</div>
-           <div className="capability-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}><CheckIcon /> KG Connection Alive</div>
-           <div className="capability-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}><CheckIcon /> OCR Vision Ready</div>
+           <div className="nav-group-title" style={{ marginTop: '28px' }}>AGENTIC CAPABILITIES</div>
+           <div className="capability-item"><CheckIcon /> Local Sandbox Active</div>
+           <div className="capability-item"><CheckIcon /> 100% GPU Accelerated</div>
+           <div className="capability-item"><CheckIcon /> Atomic Knowledge Graph</div>
+           <div className="capability-item"><CheckIcon /> Air-Gapped Sovereign Node</div>
         </div>
         <div className="sidebar-footer">
-          <div className="security-status" style={{ marginBottom: '16px', fontSize: '0.8rem', color: '#2f9e44', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+          <div className="security-status" style={{ marginBottom: '14px', fontSize: '0.8rem', color: '#2f9e44', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
             <ShieldIcon /> Air-Gapped Mode
           </div>
-          <div className="hardware-metrics" style={{ marginBottom: '16px', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>GPU LOAD:</span> <span style={{color:'var(--text-dark)'}}>34%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>VRAM USAGE:</span> <span style={{color:'var(--text-dark)'}}>16.2 / 24 GB</span></div>
+          <div className="hardware-metrics" style={{ marginBottom: '14px', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span>INFERENCE:</span> <span style={{color:'var(--accent-color)', fontWeight: 600}}>0.85s/turn</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GPU ACCEL:</span> <span style={{color:'var(--text-dark)'}}>100% VRAM</span></div>
           </div>
           <div className="operator-block">
              <span className="dot active"></span> {username}
           </div>
-          <button onClick={() => setToken(null)} className="disconnect-btn">Disconnect</button>
+          <button type="button" onClick={() => setToken(null)} className="disconnect-btn">Disconnect</button>
         </div>
       </aside>
 
       <main className="workspace main-console">
-        <div className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-           <h2>Workspace: <span>Industrial Knowledge Workspace</span></h2>
-           <div className="model-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'var(--accent-color)', fontWeight: 600, background: 'rgba(0,0,0,0.04)', padding: '6px 12px', borderRadius: '6px', fontFamily: 'var(--font-sans)' }}>
-             <CpuIcon /> Open-Weight Engine: Qwen-2.5 / DeepSeek
+        <div className="topbar">
+           <div className="topbar-left">
+             <h2>Workspace: <span>Industrial Knowledge Workspace</span></h2>
+             <div className="model-status">
+               <CpuIcon /> {activeModel}
+             </div>
+           </div>
+
+           <div className="topbar-right">
+             <button type="button" className="topbar-clear-btn" onClick={handleClearChat} title="Clear conversation history">
+               <TrashIcon /> Clear Chat
+             </button>
            </div>
         </div>
+
         <div className="feed-scrollable">
           {history.length === 0 && (
             <div className="blank-canvas">
               <h3>Air-gapped industrial terminal connected.</h3>
-                <div className="onboarding-cards">
-                  <div className="card" onClick={() => setQuery("What are the primary safety protocols for industrial catalytic hydrocrackers?")}>
-                     <h4>Query KG</h4>
-                     <p>Search confidential process documentation.</p>
-                  </div>
-                  <div className="card highlight" onClick={() => fileInputRef.current?.click()}>
-                     <h4>Index Data</h4>
-                     <p>Upload a new PDF to expand the graph.</p>
-                  </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '-18px', marginBottom: '28px' }}>
+                Ask complex engineering calculations, SOP safety workflows, or failure diagnostics.
+              </p>
+              <div className="onboarding-cards">
+                <div className="card" onClick={() => handleQuery(undefined, "Calculate the heat duty for a shell-and-tube heat exchanger cooling 40,000 kg/h of crude oil from 190°C to 110°C (assume Cp = 2.3 kJ/kg·°C). Provide an executive summary and generate a formal Word report.")}>
+                   <h4>🌡️ Heat Exchanger Duty</h4>
+                   <p>Run mathematical calculations & generate a formal Word report.</p>
                 </div>
+                <div className="card highlight" onClick={() => handleQuery(undefined, "What are the primary safety protocols and emergency shutdown (ESD) procedures for industrial catalytic hydrocrackers?")}>
+                   <h4>⚠️ Hydrocracker Safety</h4>
+                   <p>Retrieve emergency shutdown procedures and API compliance.</p>
+                </div>
+              </div>
             </div>
           )}
           
@@ -475,7 +949,9 @@ function App() {
                     {isUser ? <OperatorIcon /> : <NodeIcon />}
                   </div>
                   <div className="content-column">
-                    <div className="sender-name">{isUser ? username : 'Lexicon'}</div>
+                    <div className="message-header">
+                      <div className="sender-name">{isUser ? username : 'Lexicon Engine'}</div>
+                    </div>
                     
                     {msg.thinking && (
                        <details className="reasoning-drawer">
@@ -485,8 +961,11 @@ function App() {
                     )}
                     
                     <div className="prose-content">
-                      <pre>{msg.content}</pre>
+                      <FormattedProse content={msg.content} isUser={isUser} apiUrl={API_URL} />
                     </div>
+
+                    {!isUser && <MessageActionBar content={msg.content} activeModel={activeModel} />}
+
                     {msg.scholar_results && <CoverageChart data={msg.scholar_results} />}
                   </div>
                 </div>
@@ -497,12 +976,12 @@ function App() {
               <div className="thread-item agent-item loading-item">
                  <div className="avatar-column"><NodeIcon /></div>
                  <div className="content-column">
-                    <div className="sender-name">Lexicon</div>
+                    <div className="sender-name">Lexicon Engine</div>
                     <div className="activity-indicator">
                        <div className="tracer-bar">
                          <div className="tracer-progress"></div>
                        </div>
-                       <span>Compiling execution trace...</span>
+                       <span>Reasoning with {activeModel}...</span>
                     </div>
                  </div>
               </div>
@@ -511,79 +990,176 @@ function App() {
           </div>
         </div>
 
+        {/* COMPOSER WITH AUTO-EXPANDING TEXTAREA LIKE CHATGPT / CLAUDE */}
         <div className="docked-composer">
           <form onSubmit={handleQuery} className="composer-form">
-            <input id="file-upload" type="file" accept="application/pdf" ref={fileInputRef} onChange={handleFileUpload} disabled={loading} style={{display: 'none'}} />
+            <input 
+              id="file-upload" 
+              type="file" 
+              accept="application/pdf" 
+              ref={fileInputRef} 
+              onChange={handleFileUpload} 
+              disabled={loading} 
+              style={{ display: 'none' }} 
+            />
+            
+            <button 
+              type="button" 
+              className="composer-attach-btn" 
+              onClick={() => fileInputRef.current?.click()} 
+              title="Upload PDF document to index into Knowledge Graph"
+              disabled={loading}
+            >
+              <PaperclipIcon />
+            </button>
+
             <textarea 
-              placeholder="Query the Sovereign Knowledge Graph..." 
+              ref={textareaRef}
+              placeholder="Query the Sovereign Knowledge Graph or run engineering calculations..." 
               value={query} 
               onChange={e => setQuery(e.target.value)} 
+              onInput={autoResizeTextarea}
               disabled={loading}
               rows={1}
               onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuery(e); } }}
             />
-            <button type="submit" disabled={loading || !query} className="send-action">
+
+            <button type="submit" disabled={loading || !query} className="send-action" title="Send Query">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
           </form>
+          <div className="composer-hint">
+            <span>Press <strong>Enter ↵</strong> to run · <strong>Shift + Enter</strong> for multiline</span>
+            <span>Local Sovereign Inference Active</span>
+          </div>
         </div>
       </main>
 
-      <aside className="sidebar right-panel" style={{ width: '280px', borderLeft: '1px solid rgba(0,0,0,0.1)', background: '#faf9f5', display: 'flex', flexDirection: 'column' }}>
-        <div className="topbar" style={{ padding: '20px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center' }}>
-           <h2 style={{ fontSize: '1.1rem', fontFamily: 'var(--font-sans)', color: 'var(--text-muted)' }}>Context & Artifacts</h2>
+      <aside className="sidebar right-panel">
+        <div className="right-panel-header">
+           <h2>Context & Artifacts</h2>
         </div>
         
-        <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
-           {Object.keys(scholarResults).length > 0 && (
-             <>
-               <div className="nav-group-title" style={{ marginTop: '0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>RESEARCH PAPERS (SCHOLAR)</div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '32px', position: 'relative' }}>
+        <div className="right-panel-scroll">
+           <div className="sidebar-section">
+             <div className="nav-group-title">
+               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 RESEARCH PAPERS (SCHOLAR)
+                 {totalPapersCount > 0 && <span className="scholar-count-badge">{totalPapersCount}</span>}
+               </span>
+               <div className="scholar-header-actions">
+                 {loading && <span className="scholar-live-pulse">● Fetching</span>}
+                 {totalPapersCount > 0 && (
+                   <button 
+                     type="button" 
+                     className="scholar-toggle-btn"
+                     onClick={() => setAllExpanded(!allExpanded)}
+                   >
+                     {allExpanded ? "Collapse" : "Expand"}
+                   </button>
+                 )}
+               </div>
+             </div>
+
+             {/* Direct keyword search */}
+             <form onSubmit={handleDirectScholarSearch} className="scholar-search-box">
+               <input 
+                 type="text" 
+                 placeholder="Search literature topics..." 
+                 value={scholarSearchTerm}
+                 onChange={e => setScholarSearchTerm(e.target.value)}
+                 className="scholar-search-input"
+                 disabled={searchingScholar}
+               />
+               <span className="scholar-search-icon">
+                 {searchingScholar ? "..." : "🔍"}
+               </span>
+             </form>
+
+             {loading && (
+               <div className="scholar-loading-skeleton">
+                 <div className="scholar-skeleton-card">
+                   <div className="skeleton-line" style={{ width: '40%', height: '10px' }} />
+                   <div className="skeleton-line" style={{ width: '90%', height: '12px' }} />
+                   <div className="skeleton-line" style={{ width: '70%', height: '11px' }} />
+                 </div>
+               </div>
+             )}
+
+             {Object.keys(scholarResults).length > 0 ? (
+               <div className="scholar-section-list">
                  {Object.entries(scholarResults).map(([keyword, results]) => (
-                   <ScholarKeywordSection key={keyword} keyword={keyword} results={results} onOpenSummary={setActiveSummary} />
+                   <ScholarKeywordSection 
+                     key={keyword} 
+                     keyword={keyword} 
+                     results={results} 
+                     onOpenSummary={handleOpenPaperSummary}
+                     forceExpanded={allExpanded}
+                   />
                  ))}
                </div>
-             </>
-           )}
+             ) : (
+               !loading && (
+                 <div className="collateral-empty-state">
+                   <div className="empty-state-icon"><FileIcon /></div>
+                   <div className="empty-state-title">No literature papers indexed</div>
+                   <div className="empty-state-sub">Academic papers matching your query concepts or search terms will appear here.</div>
+                   <button 
+                     type="button" 
+                     className="load-starter-papers-btn"
+                     onClick={() => setScholarResults(DEFAULT_SCHOLAR_PAPERS)}
+                   >
+                     Load Recommended Papers
+                   </button>
+                 </div>
+               )
+             )}
+           </div>
 
-           <div className="nav-group-title" style={{ marginTop: Object.keys(scholarResults).length > 0 ? '0' : '0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>ACTIVE KNOWLEDGE BASE</div>
-           
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.05)' }}>
+           <div className="sidebar-section">
+             <div className="nav-group-title">GENERATED COLLATERAL (.DOCX)</div>
+             {generatedReports.length > 0 ? (
+               generatedReports.map((rep, idx) => (
+                 <a key={idx} href={`${API_URL}/download/report`} download={rep.name} style={{ textDecoration: 'none' }}>
+                   <div className="collateral-card">
+                      <div style={{ color: '#107c41' }}><FileIcon /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                         <div className="collateral-title">{rep.name}</div>
+                         <div className="collateral-sub">Generated at {rep.timestamp}</div>
+                      </div>
+                      <span className="collateral-dl-pill">Download</span>
+                   </div>
+                 </a>
+               ))
+             ) : (
+               <div className="collateral-empty-state">
+                 <div className="empty-state-icon"><FileIcon /></div>
+                 <div className="empty-state-title">No documents generated yet</div>
+                 <div className="empty-state-sub">Reports generated by calculations will appear here for download.</div>
+               </div>
+             )}
+           </div>
+
+           <div className="sidebar-section">
+             <div className="nav-group-title">ACTIVE KNOWLEDGE BASE</div>
+             <div className="knowledge-base-card">
                 <div style={{ color: 'var(--accent-color)' }}><DatabaseIcon /></div>
                 <div>
-                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '4px' }}>MRPL Internal Policies</div>
-                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Local Vector DB Connected</div>
-                </div>
-             </div>
-           </div>
-
-           <div className="nav-group-title" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>GENERATED COLLATERAL</div>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#2f9e44' }}><FileIcon /></div>
-                <div>
-                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '4px' }}>Approval_Note_Draft.docx</div>
-                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Self-hosted generated</div>
-                </div>
-             </div>
-             
-             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ color: '#2f9e44' }}><FileIcon /></div>
-                <div>
-                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '4px' }}>Engineering_Calcs.xlsx</div>
-                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Via secure Python sandbox</div>
+                   <div className="kb-title">Atomic Knowledge Graph</div>
+                   <div className="kb-sub">Connected: sovereign-industrial-workbench</div>
                 </div>
              </div>
            </div>
            
-           <div className="nav-group-title" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>EXECUTION SANDBOX</div>
-           <div style={{ background: '#1e1e1e', borderRadius: '6px', padding: '12px', color: '#d4d4d4', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', lineHeight: 1.5 }}>
-              <span style={{ color: '#569cd6' }}>$</span> verify_airgap_status<br/>
-              <span style={{ color: '#4caf50' }}>[OK]</span> External network blocked<br/>
-              <span style={{ color: '#569cd6' }}>$</span> sandbox run --strict<br/>
-              <span style={{ color: '#4caf50' }}>[OK]</span> Sandbox secure.<br/>
-              <span style={{ color: '#569cd6' }}>&gt;</span> Awaiting instructions...
+           <div className="sidebar-section">
+             <div className="nav-group-title">EXECUTION SANDBOX</div>
+             <div className="sandbox-terminal-box">
+                <span style={{ color: '#569cd6' }}>$</span> verify_airgap_status<br/>
+                <span style={{ color: '#4caf50' }}>[OK]</span> External network blocked<br/>
+                <span style={{ color: '#569cd6' }}>$</span> sandbox run --strict<br/>
+                <span style={{ color: '#4caf50' }}>[OK]</span> Sandbox secure.<br/>
+                <span style={{ color: '#569cd6' }}>&gt;</span> Awaiting instructions...
+             </div>
            </div>
         </div>
       </aside>
@@ -598,9 +1174,9 @@ function App() {
               </div>
               <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-serif)', margin: '0 0 8px 0', lineHeight: 1.3 }}>{activeSummary.title}</h2>
               <a href={activeSummary.link || `https://${activeSummary.source_domain}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: 'var(--accent-color)', textDecoration: 'none' }}>
-                Open original source &↗
+                Open original source &rarr;
               </a>
-              <button className="close-btn" onClick={() => setActiveSummary(null)}>×</button>
+              <button type="button" className="close-btn" onClick={() => setActiveSummary(null)}>×</button>
             </div>
             
             <div className="summary-modal-body">

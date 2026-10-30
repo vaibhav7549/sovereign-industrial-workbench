@@ -40,10 +40,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.env
-docker-compose.yml
+
+# Backups & generated temp files
+*.bak
+*.docx
+bench_he.json
 
 # Encryption layer state (sealed HE context, ciphertext vault, audit log) - never commit
 backend/data/
 *.enc
 vault.sqlite3*
+

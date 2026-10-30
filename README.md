@@ -177,17 +177,21 @@ You can run the workbench either **Locally (Bare Metal)** or with **Docker Compo
 
 If you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed, you can build and run both frontend and backend with a single command:
 
-1. In the project root directory, run:
+1. Configure your environment in `backend/.env` (copy from `backend/.env.example` if not already present). **All model names, ports, and inference endpoints are loaded directly from `backend/.env`** — you do not need to modify `docker-compose.yml` when changing models.
+
+2. In the project root directory, run:
    ```bash
    docker compose up --build
    ```
 
-2. Access the services:
+3. Access the services:
    - **Frontend UI**: `http://localhost:5173`
    - **Backend API**: `http://localhost:8000`
    - **Swagger Docs**: `http://localhost:8000/docs`
 
-3. To shut down the containers:
+> 💡 **Cross-Platform Host Routing**: When running inside Docker, requests to `localhost` for Ollama or LM Studio automatically route to `host.docker.internal` via Docker's host gateway, allowing out-of-the-box local model connectivity on Windows, macOS, and Linux.
+
+4. To shut down the containers:
    ```bash
    docker compose down
    ```
@@ -269,12 +273,12 @@ Once both servers are running and you open `http://localhost:5173`:
 | :--- | :--- | :--- |
 | `HOST` | `0.0.0.0` | Backend host binding |
 | `PORT` | `8000` | Backend port |
-| `LLM_BASE_URL` | `http://localhost:1234/v1` | OpenAI-compatible endpoint (LM Studio / Ollama / vLLM) |
-| `LLM_MODEL` | `qwen2.5-7b-instruct-1m` | Open-weight model name loaded in local engine |
-| `LLM_API_KEY` | `1234` | API authorization key for inference endpoint |
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | OpenAI-compatible inference endpoint (Ollama / LM Studio / vLLM) |
+| `LLM_MODEL` | `qwen2.5:3b` | Open-weight model name (e.g. `qwen2.5:3b`, `qwen2.5:7b`, `llama3:8b`, etc.) |
+| `LLM_API_KEY` | `ollama` | API authorization key for inference endpoint |
 | `MCP_URL` | `http://localhost:8080/mcp` | Centralized Atomic Model Context Protocol server URL |
-| `MCP_AUTH_HEADER` | `Bearer at_aoUQ...` | Authorization token for MCP server |
-| `SERPAPI_KEY` | *(included demo key)* | SerpAPI key for Google Scholar academic search |
+| `MCP_AUTH_HEADER` | `Bearer <token>` | Authorization token for Atomic MCP server |
+| `SERPAPI_KEY` | *(optional)* | SerpAPI key for Google Scholar academic search (air-gapped fallback available) |
 | `VITE_API_URL` | `http://localhost:8000` | Frontend backend gateway URL |
 
 ---

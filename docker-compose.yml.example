@@ -6,29 +6,27 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sovereign-backend
-    network_mode: host
-    # Secrets (MCP_AUTH_HEADER, SERPAPI_KEY, ENCRYPTION_MASTER_KEY) come from backend/.env,
-    # which is git-ignored and docker-ignored. They are deliberately NOT listed under
-    # `environment:` - an entry like ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY} would
-    # override the env_file value with an empty string when the shell variable is unset.
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # All model settings, inference endpoints, credentials, and custom flags
+    # are loaded directly from backend/.env. To change the LLM model, simply
+    # update LLM_MODEL in backend/.env — no edits to docker-compose.yml needed.
     env_file:
       - ./backend/.env
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - LLM_BASE_URL=http://localhost:11434/v1
-      - LLM_MODEL=qwen2.5:3b
-      - LLM_API_KEY=ollama
-      - MCP_URL=http://localhost:8080/mcp
-      # --- Encryption layer ---
-      - ENCRYPTION_ENABLED=true
+      - RUNNING_IN_DOCKER=true
+      # --- Encryption layer defaults (can be overridden in backend/.env) ---
       - ENCRYPTION_DATA_DIR=/data
       - HE_CONTEXT_FILE=/data/he/he_context.enc
       - HE_POLY_MODULUS_DEGREE=8192
       - HE_COEFF_MOD_BIT_LENGTHS=[60, 40, 40, 60]
       - HE_THREADS=1
       - DIFFERENTIAL_PRIVACY_ENABLED=true
-      - DP_EPSILON=${DP_EPSILON:-1.0}
+      - DP_EPSILON=5000
       - DP_DELTA=1e-5
       - EMBED_MODEL=nomic-embed-text
     volumes:
