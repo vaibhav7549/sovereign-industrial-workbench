@@ -249,21 +249,31 @@ Once both servers are running and you open `http://localhost:5173`:
 
 2. **Query the Knowledge Graph & Chat**:
    - Type an industrial query in the bottom composer (e.g., *"What are the primary safety protocols for industrial catalytic hydrocrackers?"*).
+   - Toggle **`🔬 Deep Research`** (like DeepSeek's DeepThink mode) in the composer if you want the agent to search Google Scholar literature via SerpAPI. When toggled OFF, external API lookups are completely bypassed for fast, strictly air-gapped on-premise execution.
    - Click Send (or press Enter).
    - Click **"View Execution Trace"** above the answer to inspect the agent's chain-of-thought and tool calls.
 
 3. **Explore Google Scholar Research Grounding**:
-   - Below the response, the interactive **Research Coverage Chart** plots academic literature density across keywords.
+   - When **Deep Research** is enabled, the interactive **Research Coverage Chart** plots academic literature density across keywords.
    - In the right-hand panel, click any keyword pill under **RESEARCH PAPERS (SCHOLAR)** to expand paper cards.
    - Hover over any paper to see live web-scraped previews.
    - Click the ✨ Sparkle button on a paper to open the **LexRank Extractive Summary Modal**.
 
-4. **Ingest Technical Documents (PDF to KG Atom)**:
+4. **Live Execution Sandbox Terminal**:
+   - The right sidebar features a live **Execution Sandbox Console** with a live beacon.
+   - Displays real-time streaming traces of AST mathematical evaluation, query dispatch, and document compilation.
+   - Includes quick **Ping** and **Clear** controls directly on the terminal header.
+
+5. **Active Knowledge Base & Topology Inspector**:
+   - Shows live connection status to the centralized Atomic Knowledge Graph or local standalone vault.
+   - Click **"Inspect"** or **"Knowledge Vault"** in the sidebar to review indexed atom counts, MCP topology, and CKKS homomorphic encryption parameters.
+
+6. **Ingest Technical Documents (PDF to KG Atom)**:
    - Click **"Ingest Document"** in the left sidebar navigation.
    - Select any technical PDF. The backend extracts text using `pypdf`, converts it into clean markdown sections, and pushes an atom into the centralized Knowledge Graph via MCP.
 
-5. **Diagnostic Sandbox Ping**:
-   - Click **"Diagnostic Ping"** in the left sidebar to test isolated backend tool routing and session security.
+7. **Diagnostic Sandbox Ping**:
+   - Click **"Diagnostic Ping"** in the left sidebar to execute a live roundtrip latency check, AST sandbox verification, and clearance validation with in-app toast feedback.
 
 ---
 

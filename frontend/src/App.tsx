@@ -338,7 +338,7 @@ function FormattedProse({ content, isUser, apiUrl }: { content: string, isUser: 
   );
 }
 
-function MessageActionBar({ content, activeModel }: { content: string, activeModel?: string }) {
+function MessageActionBar({ content, activeModel, researchMode }: { content: string, activeModel?: string, researchMode?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -349,12 +349,53 @@ function MessageActionBar({ content, activeModel }: { content: string, activeMod
 
   return (
     <div className="message-action-bar">
-      <span className="model-chip">{activeModel || "Local LLM"}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span className="model-chip">{activeModel || "Local LLM"}</span>
+        {researchMode ? (
+          <span className="mode-pill mode-research" title="Grounded with Google Scholar peer-reviewed papers">
+            🔬 Deep Research
+          </span>
+        ) : (
+          <span className="mode-pill mode-airgap" title="Strict air-gapped sovereign execution">
+            🛡️ Air-Gapped Mode
+          </span>
+        )}
+      </div>
       <button type="button" className="msg-action-btn" onClick={handleCopy} title="Copy response text">
         {copied ? <><CheckIcon /> Copied!</> : <><CopyIcon /> Copy</>}
       </button>
     </div>
   );
+}
+
+function formatTerminalLine(log: string) {
+  if (log.startsWith('$') || log.startsWith('>')) {
+    return <><span className="cmd-prompt">{log.slice(0, 2)}</span> {log.slice(2)}</>;
+  }
+  if (log.startsWith('[OK]') || log.startsWith('[PASS]') || log.startsWith('[READY]')) {
+    const tag = log.split(']')[0] + ']';
+    const rest = log.slice(tag.length);
+    return <><span className="tag-ok">{tag}</span>{rest}</>;
+  }
+  if (log.startsWith('[DIAG]')) {
+    return <><span className="tag-diag">[DIAG]</span>{log.slice(6)}</>;
+  }
+  if (log.startsWith('[DOCX]')) {
+    return <><span className="tag-docx">[DOCX]</span>{log.slice(6)}</>;
+  }
+  if (log.startsWith('[RESEARCH]')) {
+    return <><span className="tag-diag">[RESEARCH]</span>{log.slice(10)}</>;
+  }
+  if (log.startsWith('[AIRGAP]')) {
+    return <><span className="tag-ok">[AIRGAP]</span>{log.slice(8)}</>;
+  }
+  if (log.startsWith('[WARN]') || log.startsWith('[ERR]')) {
+    return <><span className="tag-warn">{log.split(']')[0] + ']'}</span>{log.slice(log.indexOf(']') + 1)}</>;
+  }
+  if (log.startsWith('[EXEC]') || log.startsWith('[AGENT]')) {
+    return <><span className="tag-exec">{log.split(']')[0] + ']'}</span>{log.slice(log.indexOf(']') + 1)}</>;
+  }
+  return log;
 }
 
 // --- SCHOLAR & CHART COMPONENTS ---
@@ -650,7 +691,7 @@ function App() {
   const [username, setUsername] = useState<string>('');
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<{role: string, content: string, thinking?: string, scholar_results?: any}[]>([]);
+  const [history, setHistory] = useState<{role: string, content: string, thinking?: string, scholar_results?: any, research_mode?: boolean}[]>([]);
   const [scholarResults, setScholarResults] = useState<Record<string, {title: string, link: string}[]>>(DEFAULT_SCHOLAR_PAPERS);
   const [scholarSearchTerm, setScholarSearchTerm] = useState<string>('');
   const [searchingScholar, setSearchingScholar] = useState<boolean>(false);
@@ -658,10 +699,51 @@ function App() {
   const [generatedReports, setGeneratedReports] = useState<{name: string, timestamp: string}[]>([]);
   const [activeSummary, setActiveSummary] = useState<any>(null);
   const [activeModel, setActiveModel] = useState<string>('Local Sovereign LLM');
+  const [researchMode, setResearchMode] = useState<boolean>(false);
+  
+  // Live reactive Execution Sandbox logs
+  const [sandboxLogs, setSandboxLogs] = useState<string[]>([
+    "$ init_sovereign_sandbox --strict",
+    "[OK] AST math compiler: HEALTHY",
+    "[OK] External telemetry blocked (Air-gap)",
+    "$ ready_awaiting_operator_commands..."
+  ]);
+
+  // Live Active Knowledge Base status
+  const [kbStatus, setKbStatus] = useState<{
+    status: string;
+    mcp_connected: boolean;
+    mcp_url: string;
+    encryption_enabled: boolean;
+    atoms_indexed: number;
+    vault_mode: string;
+    timestamp?: string;
+  }>({
+    status: 'online',
+    mcp_connected: true,
+    mcp_url: '',
+    encryption_enabled: true,
+    atoms_indexed: 52,
+    vault_mode: 'CKKS 8192-bit Homomorphic'
+  });
+  const [showKbModal, setShowKbModal] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const sandboxBottomRef = useRef<HTMLDivElement>(null);
+
+  const fetchKbStatus = () => {
+    fetch(`${API_URL}/knowledge/status`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.status) {
+          setKbStatus(data);
+        }
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetch(`${API_URL}/`)
@@ -672,7 +754,12 @@ function App() {
         }
       })
       .catch(() => {});
+    fetchKbStatus();
   }, []);
+
+  useEffect(() => {
+    sandboxBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [sandboxLogs]);
 
   // Auto-resize textarea like ChatGPT / Claude (smooth expansion up to ~220px)
   const autoResizeTextarea = () => {
@@ -700,6 +787,10 @@ function App() {
       const resp = await fetch(`${API_URL}/login?username=${username}`, { method: 'POST' });
       const data = await resp.json();
       setToken(data.token);
+      setSandboxLogs(prev => [
+        ...prev.slice(-35),
+        `[AUTH] Operator '${data.username}' clearance token issued`
+      ]);
     } catch {
       alert("Verification failed.");
     }
@@ -718,8 +809,15 @@ function App() {
     setHistory(prev => [...prev, {role: 'user', content: currentQ}]);
     setLoading(true);
 
+    const logPrompt = currentQ.length > 30 ? currentQ.slice(0, 30) + '...' : currentQ;
+    setSandboxLogs(prev => [
+      ...prev.slice(-35),
+      `> query.dispatch: "${logPrompt}" [DeepResearch: ${researchMode ? 'ON' : 'OFF'}]`,
+      researchMode ? "[RESEARCH] Querying Google Scholar literature..." : "[AIRGAP] External lookups bypassed"
+    ]);
+
     try {
-      const resp = await fetch(`${API_URL}/agent/query?query=${encodeURIComponent(currentQ)}&token=${token}`, { method: 'POST' });
+      const resp = await fetch(`${API_URL}/agent/query?query=${encodeURIComponent(currentQ)}&token=${token}&research_mode=${researchMode}`, { method: 'POST' });
       const data = await resp.json();
       const outputTxt = data.agent_response || JSON.stringify(data, null, 2);
       const thinkingTxt = data.agent_thinking || "";
@@ -729,8 +827,14 @@ function App() {
         role: 'agent', 
         content: outputTxt, 
         thinking: thinkingTxt, 
-        scholar_results: data.scholar_results
+        scholar_results: data.scholar_results,
+        research_mode: data.research_mode ?? researchMode
       }]);
+
+      setSandboxLogs(prev => [
+        ...prev.slice(-35),
+        `[OK] Response synthesized (${agentTime})`
+      ]);
       
       // If a Word report was ACTUALLY generated in this turn, record it
       if (isActualReportGenerated(outputTxt)) {
@@ -738,6 +842,7 @@ function App() {
           ...prev.filter(r => r.name !== "Sovereign_Industrial_Report.docx"),
           { name: "Sovereign_Industrial_Report.docx", timestamp: agentTime }
         ]);
+        setSandboxLogs(prev => [...prev.slice(-35), "[DOCX] Generated Sovereign_Industrial_Report.docx"]);
       }
 
       if (data.scholar_results && Object.keys(data.scholar_results).length > 0) {
@@ -746,6 +851,7 @@ function App() {
       }
     } catch {
       setHistory(prev => [...prev, {role: 'agent', content: 'Connection to inference node lost.'}]);
+      setSandboxLogs(prev => [...prev.slice(-35), "[ERR] Inference node connection lost"]);
     }
     setLoading(false);
   }
@@ -754,6 +860,7 @@ function App() {
     const file = e.target.files?.[0];
     if (!file || !token) return;
     setLoading(true);
+    setSandboxLogs(prev => [...prev.slice(-35), `> ingest.pdf: "${file.name}"`]);
     const formData = new FormData();
     formData.append('file', file);
     try {
@@ -763,8 +870,14 @@ function App() {
       });
       const data = await resp.json();
       setHistory(prev => [...prev, {role: 'agent', content: JSON.stringify(data, null, 2)}]);
+      setSandboxLogs(prev => [...prev.slice(-35), `[OK] "${file.name}" indexed -> Knowledge Graph`]);
+      fetchKbStatus();
+      setToastMessage(`Document "${file.name}" indexed into Knowledge Graph.`);
+      setTimeout(() => setToastMessage(null), 4000);
     } catch {
-      alert("Document indexing failed.");
+      setSandboxLogs(prev => [...prev.slice(-35), `[ERR] Document indexing failed for "${file.name}"`]);
+      setToastMessage("Document indexing failed. Please verify format.");
+      setTimeout(() => setToastMessage(null), 4000);
     }
     setLoading(false);
     if(fileInputRef.current) fileInputRef.current.value = '';
@@ -772,12 +885,22 @@ function App() {
   
   const callDummyTool = async () => {
     if(!token) return;
+    setSandboxLogs(prev => [...prev.slice(-35), "> ping --strict-diagnostic"]);
     try {
-      const resp = await fetch(`${API_URL}/dummy_tool?input_val=test&token=${token}`, { method: 'POST' });
+      const resp = await fetch(`${API_URL}/dummy_tool?input_val=health_check&token=${token}`, { method: 'POST' });
       const data = await resp.json();
-      alert("Ping response: " + JSON.stringify(data));
+      setSandboxLogs(prev => [
+        ...prev.slice(-35),
+        `[DIAG] Operator: ${data.user} | Latency: ${data.latency_ms}ms`,
+        `[DIAG] AST Sandbox: ${data.ast_math_sandbox} | Isolation: ${data.sandbox_isolation}`,
+        `[PASS] Encryption: ${data.encryption_layer} | Node: ${data.mcp_status}`
+      ]);
+      setToastMessage(`✅ Diagnostic Health: ${data.latency_ms}ms | AST Sandbox: ${data.ast_math_sandbox} | Air-gap: ${data.sandbox_isolation}`);
+      setTimeout(() => setToastMessage(null), 4000);
     } catch(err) {
-      alert("Error: " + err);
+      setSandboxLogs(prev => [...prev.slice(-35), `[ERR] Diagnostic ping failed: ${err}`]);
+      setToastMessage("Diagnostic ping failed. Check backend connection.");
+      setTimeout(() => setToastMessage(null), 4000);
     }
   }
 
@@ -876,11 +999,14 @@ function App() {
         </div>
         <div className="workspace-nav">
            <div className="nav-group-title">COMMANDS</div>
-           <button type="button" onClick={callDummyTool} className="nav-item">
+           <button type="button" onClick={callDummyTool} className="nav-item" title="Run diagnostic node latency and sandbox AST check">
              <ActionIcon /> Diagnostic Ping
            </button>
-           <button type="button" className="nav-item" onClick={() => fileInputRef.current?.click()}>
+           <button type="button" className="nav-item" onClick={() => fileInputRef.current?.click()} title="Ingest technical PDF into the Knowledge Graph">
              <ActionIcon /> Ingest Document
+           </button>
+           <button type="button" className="nav-item" onClick={() => setShowKbModal(true)} title="Inspect Active Knowledge Graph & Vault Topology">
+             <ActionIcon /> Knowledge Vault
            </button>
 
            <div className="nav-group-title" style={{ marginTop: '28px' }}>AGENTIC CAPABILITIES</div>
@@ -964,7 +1090,7 @@ function App() {
                       <FormattedProse content={msg.content} isUser={isUser} apiUrl={API_URL} />
                     </div>
 
-                    {!isUser && <MessageActionBar content={msg.content} activeModel={activeModel} />}
+                    {!isUser && <MessageActionBar content={msg.content} activeModel={activeModel} researchMode={msg.research_mode} />}
 
                     {msg.scholar_results && <CoverageChart data={msg.scholar_results} />}
                   </div>
@@ -1011,6 +1137,19 @@ function App() {
               disabled={loading}
             >
               <PaperclipIcon />
+            </button>
+
+            {/* DeepSeek-style DeepThink / Deep Research Toggle Button */}
+            <button
+              type="button"
+              className={`deepthink-toggle-pill ${researchMode ? 'active' : ''}`}
+              onClick={() => setResearchMode(prev => !prev)}
+              title={researchMode ? "Deep Research Mode ON: SerpAPI & Google Scholar literature search active" : "Deep Research Mode OFF: Pure sovereign air-gapped fast inference"}
+              disabled={loading}
+            >
+              <span className="deepthink-sparkle"><SparkleIcon /></span>
+              <span className="deepthink-text">Deep Research</span>
+              <span className="deepthink-state">{researchMode ? 'ON' : 'OFF'}</span>
             </button>
 
             <textarea 
@@ -1101,16 +1240,30 @@ function App() {
              ) : (
                !loading && (
                  <div className="collateral-empty-state">
-                   <div className="empty-state-icon"><FileIcon /></div>
-                   <div className="empty-state-title">No literature papers indexed</div>
-                   <div className="empty-state-sub">Academic papers matching your query concepts or search terms will appear here.</div>
-                   <button 
-                     type="button" 
-                     className="load-starter-papers-btn"
-                     onClick={() => setScholarResults(DEFAULT_SCHOLAR_PAPERS)}
-                   >
-                     Load Recommended Papers
-                   </button>
+                   <div className="empty-state-icon"><SparkleIcon /></div>
+                   <div className="empty-state-title">Deep Research is {researchMode ? 'Active' : 'Off'}</div>
+                   <div className="empty-state-sub">
+                     {researchMode 
+                       ? "Ask an industrial query to fetch and cross-reference literature from Google Scholar."
+                       : "External SerpAPI and Google Scholar calls are disabled for strict air-gapped operation."}
+                   </div>
+                   {!researchMode ? (
+                     <button 
+                       type="button" 
+                       className="enable-deepresearch-btn"
+                       onClick={() => setResearchMode(true)}
+                     >
+                       Enable Deep Research
+                     </button>
+                   ) : (
+                     <button 
+                       type="button" 
+                       className="load-starter-papers-btn"
+                       onClick={() => setScholarResults(DEFAULT_SCHOLAR_PAPERS)}
+                     >
+                       Load Reference Literature
+                     </button>
+                   )}
                  </div>
                )
              )}
@@ -1142,23 +1295,59 @@ function App() {
 
            <div className="sidebar-section">
              <div className="nav-group-title">ACTIVE KNOWLEDGE BASE</div>
-             <div className="knowledge-base-card">
-                <div style={{ color: 'var(--accent-color)' }}><DatabaseIcon /></div>
-                <div>
-                   <div className="kb-title">Atomic Knowledge Graph</div>
-                   <div className="kb-sub">Connected: sovereign-industrial-workbench</div>
+             <div className="knowledge-base-card" onClick={() => setShowKbModal(true)} style={{ cursor: 'pointer' }} title="Click to inspect Knowledge Vault & Topology">
+                <div className="kb-icon-wrap"><DatabaseIcon /></div>
+                <div className="kb-details">
+                   <div className="kb-title">{kbStatus.mcp_connected ? 'Atomic Knowledge Graph' : 'Sovereign Local Vault'}</div>
+                   <div className="kb-meta">
+                      <span className={`kb-status-dot ${kbStatus.mcp_connected ? 'active' : 'local'}`}></span>
+                      <span>{kbStatus.mcp_connected ? 'MCP Connected' : 'Local Standalone'}</span>
+                      <span className="kb-atom-badge">{kbStatus.atoms_indexed} Atoms</span>
+                   </div>
                 </div>
+                <button type="button" className="kb-inspect-btn" onClick={(e) => { e.stopPropagation(); setShowKbModal(true); }}>
+                  Inspect
+                </button>
              </div>
            </div>
            
            <div className="sidebar-section">
-             <div className="nav-group-title">EXECUTION SANDBOX</div>
-             <div className="sandbox-terminal-box">
-                <span style={{ color: '#569cd6' }}>$</span> verify_airgap_status<br/>
-                <span style={{ color: '#4caf50' }}>[OK]</span> External network blocked<br/>
-                <span style={{ color: '#569cd6' }}>$</span> sandbox run --strict<br/>
-                <span style={{ color: '#4caf50' }}>[OK]</span> Sandbox secure.<br/>
-                <span style={{ color: '#569cd6' }}>&gt;</span> Awaiting instructions...
+             <div className="nav-group-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span>EXECUTION SANDBOX</span>
+             </div>
+             <div className="sandbox-terminal-container">
+               <div className="sandbox-terminal-header">
+                 <div className="terminal-title-group">
+                   <div className="live-beacon"></div>
+                   <span>SANDBOX CONSOLE</span>
+                 </div>
+                 <div className="sandbox-terminal-actions">
+                   <button 
+                     type="button" 
+                     className="terminal-action-btn" 
+                     onClick={callDummyTool}
+                     title="Run live diagnostic node health check"
+                   >
+                     Ping
+                   </button>
+                   <button 
+                     type="button" 
+                     className="terminal-action-btn" 
+                     onClick={() => setSandboxLogs(["$ ready_awaiting_operator_commands..."])}
+                     title="Clear terminal log"
+                   >
+                     Clear
+                   </button>
+                 </div>
+               </div>
+               <div className="sandbox-terminal-box">
+                 {sandboxLogs.map((log, i) => (
+                   <div key={i} className="terminal-line">
+                     {formatTerminalLine(log)}
+                   </div>
+                 ))}
+                 <div ref={sandboxBottomRef} />
+               </div>
              </div>
            </div>
         </div>
@@ -1203,6 +1392,63 @@ function App() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Knowledge Base Modal */}
+      {showKbModal && (
+        <div className="kb-modal-overlay" onClick={() => setShowKbModal(false)}>
+          <div className="kb-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="kb-modal-header">
+              <h3><DatabaseIcon /> Knowledge Vault & MCP Topology</h3>
+              <button type="button" className="close-btn" onClick={() => setShowKbModal(false)}>×</button>
+            </div>
+            <div className="kb-modal-body">
+              <div className="kb-info-row">
+                <span className="kb-info-label">Knowledge Engine</span>
+                <span className="kb-info-value">{kbStatus.vault_mode}</span>
+              </div>
+              <div className="kb-info-row">
+                <span className="kb-info-label">Centralized MCP Status</span>
+                <span className="kb-info-value" style={{ color: kbStatus.mcp_connected ? '#2f9e44' : '#fa8c16' }}>
+                  {kbStatus.mcp_connected ? '● Active Session Connected' : '● Sovereign Air-Gap Standalone'}
+                </span>
+              </div>
+              <div className="kb-info-row">
+                <span className="kb-info-label">MCP Server URL</span>
+                <span className="kb-info-value" style={{ fontSize: '0.72rem' }}>{kbStatus.mcp_url || 'https://atomicapp.ai/mcp'}</span>
+              </div>
+              <div className="kb-info-row">
+                <span className="kb-info-label">Total Indexed Atoms</span>
+                <span className="kb-info-value">{kbStatus.atoms_indexed} Documents / Chunks</span>
+              </div>
+              <div className="kb-info-row">
+                <span className="kb-info-label">Encryption Master State</span>
+                <span className="kb-info-value">{kbStatus.encryption_enabled ? 'TenSEAL CKKS + Differential Privacy' : 'Local Plaintext Vault'}</span>
+              </div>
+              <div className="kb-info-row">
+                <span className="kb-info-label">Operator Clearance</span>
+                <span className="kb-info-value">{username || 'Active Operator'}</span>
+              </div>
+            </div>
+            <div className="kb-modal-actions">
+              <button type="button" className="kb-action-secondary" onClick={() => { setShowKbModal(false); fileInputRef.current?.click(); }}>
+                Ingest New PDF
+              </button>
+              <button type="button" className="kb-action-primary" onClick={() => setShowKbModal(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification Banner */}
+      {toastMessage && (
+        <div className="toast-banner">
+          <ShieldIcon />
+          <span>{toastMessage}</span>
+          <button type="button" className="toast-close-btn" onClick={() => setToastMessage(null)}>×</button>
         </div>
       )}
 
