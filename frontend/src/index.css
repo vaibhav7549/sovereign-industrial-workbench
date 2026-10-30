@@ -1,15 +1,50 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg-color: #f4f2ec;
-  --text-dark: #1a1a1a;
-  --text-muted: #555555;
+  --bg-color: #f7f6f2;
+  --bg-card: #ffffff;
+  --sidebar-bg: #eeece5;
+  --topbar-bg: rgba(247, 246, 242, 0.92);
+  --right-panel-bg: #faf9f6;
+  --text-dark: #111418;
+  --text-muted: #5e6670;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-subtle: rgba(0, 0, 0, 0.06);
   --accent-color: #d14900;
-  --border-color: #1a1a1a;
+  --accent-hover: #b83d00;
+  --accent-subtle: rgba(209, 73, 0, 0.08);
+  --composer-bg: #ffffff;
+  --composer-toolbar-bg: #faf9f6;
+  --drawer-bg: #fcfbfa;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-chip-bg: rgba(0, 0, 0, 0.06);
+  --modal-overlay: rgba(0, 0, 0, 0.45);
   
-  --font-serif: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Space Grotesk', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --bg-color: #0d1117;
+  --bg-card: #161b22;
+  --sidebar-bg: #111418;
+  --topbar-bg: rgba(13, 17, 23, 0.94);
+  --right-panel-bg: #111418;
+  --text-dark: #f0f6fc;
+  --text-muted: #8b949e;
+  --border-color: rgba(240, 246, 252, 0.12);
+  --border-subtle: rgba(240, 246, 252, 0.07);
+  --accent-color: #f06a28;
+  --accent-hover: #fa7d3d;
+  --accent-subtle: rgba(240, 106, 40, 0.15);
+  --composer-bg: #161b22;
+  --composer-toolbar-bg: #1c2128;
+  --drawer-bg: #161b22;
+  --hover-bg: rgba(240, 246, 252, 0.05);
+  --active-chip-bg: rgba(240, 246, 252, 0.1);
+  --modal-overlay: rgba(0, 0, 0, 0.75);
 }
 
 body, html {
@@ -19,16 +54,43 @@ body, html {
   color: var(--text-dark);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 * {
   box-sizing: border-box;
 }
 
-h1, h2, h3, h4 {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  margin: 0;
+/* Theme-adaptive subtle scrollbar styling across all browsers */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
 }
 
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text-dark);
+}

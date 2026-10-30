@@ -10,8 +10,17 @@ const NodeIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
 );
 
-const ActionIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+
+const ActivityIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+);
+
+const UploadIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+);
+
+const LogOutIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
 );
 
 const ShieldIcon = () => (
@@ -54,8 +63,16 @@ const PaperclipIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
 );
 
-const FileWordIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 13l2 4 2-4 2 4"></path></svg>
+const SunIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+);
+
+const MoonIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+);
+
+const AcademicCapIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
 );
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -318,7 +335,7 @@ function FormattedProse({ content, isUser, apiUrl }: { content: string, isUser: 
         <div className="generated-report-card">
           <div className="report-card-left">
             <div className="report-badge">
-              <FileWordIcon />
+              <FileIcon />
             </div>
             <div className="report-meta">
               <div className="report-title">Sovereign_Industrial_Report.docx</div>
@@ -352,12 +369,12 @@ function MessageActionBar({ content, activeModel, researchMode }: { content: str
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span className="model-chip">{activeModel || "Local LLM"}</span>
         {researchMode ? (
-          <span className="mode-pill mode-research" title="Grounded with Google Scholar peer-reviewed papers">
-            🔬 Deep Research
+          <span className="mode-pill mode-research" title="Correlated with peer-reviewed literature">
+            📚 Research Grounded
           </span>
         ) : (
           <span className="mode-pill mode-airgap" title="Strict air-gapped sovereign execution">
-            🛡️ Air-Gapped Mode
+            🛡️ Air-Gapped
           </span>
         )}
       </div>
@@ -400,36 +417,7 @@ function formatTerminalLine(log: string) {
 
 // --- SCHOLAR & CHART COMPONENTS ---
 
-const DEFAULT_SCHOLAR_PAPERS: Record<string, {title: string, link: string}[]> = {
-  "Heat Exchanger Thermal Duty": [
-    {
-      title: "Investigation of Heat Transfer Rates on Shell and Tube Heat Exchanger by Numerical Modelling via CFD Analysis",
-      link: "https://arxiv.org/abs/2310.17257"
-    },
-    {
-      title: "Thermal Performance and Friction Factor in Double Pipe and Shell-and-Tube Heat Exchangers",
-      link: "https://www.sciencedirect.com/science/article/pii/S135943111932456X"
-    },
-    {
-      title: "Design and optimization of shell-and-tube heat exchangers based on TEMA standards",
-      link: "https://link.springer.com/article/10.1007/s10973-018-7241-x"
-    }
-  ],
-  "Hydrocracker Catalytic Safety": [
-    {
-      title: "Slurry phase hydrocracking: process operations, safety margins and reactor dynamics",
-      link: "https://www.sciencedirect.com/science/article/pii/S001623612032682X"
-    },
-    {
-      title: "Emergency Shutdown Systems (ESD) and safety integrity levels in petroleum hydrocrackers",
-      link: "https://pubs.acs.org/doi/10.1021/ie50367a012"
-    },
-    {
-      title: "Risk assessment and failure mitigation in high-pressure industrial hydroprocessing reactors",
-      link: "https://www.icheme.org/publications/journals/psep"
-    }
-  ]
-};
+const DEFAULT_SCHOLAR_PAPERS: Record<string, {title: string, link: string}[]> = {};
 
 function ScholarKeywordSection({ 
   keyword, 
@@ -692,7 +680,7 @@ function App() {
   const [query, setQuery] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<{role: string, content: string, thinking?: string, scholar_results?: any, research_mode?: boolean}[]>([]);
-  const [scholarResults, setScholarResults] = useState<Record<string, {title: string, link: string}[]>>(DEFAULT_SCHOLAR_PAPERS);
+  const [scholarResults, setScholarResults] = useState<Record<string, {title: string, link: string}[]>>({});
   const [scholarSearchTerm, setScholarSearchTerm] = useState<string>('');
   const [searchingScholar, setSearchingScholar] = useState<boolean>(false);
   const [allExpanded, setAllExpanded] = useState<boolean>(true);
@@ -700,6 +688,20 @@ function App() {
   const [activeSummary, setActiveSummary] = useState<any>(null);
   const [activeModel, setActiveModel] = useState<string>('Local Sovereign LLM');
   const [researchMode, setResearchMode] = useState<boolean>(false);
+
+  // Full Functional Dark Mode state
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('sovereign_theme') as 'light' | 'dark') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sovereign_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
   
   // Live reactive Execution Sandbox logs
   const [sandboxLogs, setSandboxLogs] = useState<string[]>([
@@ -985,6 +987,14 @@ function App() {
   if (!token) {
     return (
       <div className="login-wrapper">
+        <button 
+          type="button" 
+          className="login-theme-btn" 
+          onClick={toggleTheme} 
+          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+        >
+          {theme === 'light' ? <><MoonIcon /> <span>Dark Mode</span></> : <><SunIcon /> <span>Light Mode</span></>}
+        </button>
         <div className="login-panel">
           <div className="login-header">
             <em>001</em>
@@ -1027,60 +1037,74 @@ function App() {
         <div className="workspace-nav">
            <div className="nav-group-title">COMMANDS</div>
            <button type="button" onClick={callDummyTool} className="nav-item" title="Run diagnostic node latency and sandbox AST check">
-             <ActionIcon /> Diagnostic Ping
+             <ActivityIcon /> Diagnostic Ping
            </button>
            <button type="button" className="nav-item" onClick={() => fileInputRef.current?.click()} title="Ingest technical PDF into the Knowledge Graph">
-             <ActionIcon /> Ingest Document
+             <UploadIcon /> Ingest Document
            </button>
            <button type="button" className="nav-item" onClick={() => setShowKbModal(true)} title="Inspect Active Knowledge Graph & Vault Topology">
-             <ActionIcon /> Knowledge Vault
+             <DatabaseIcon /> Knowledge Vault
            </button>
 
-           <div className="nav-group-title" style={{ marginTop: '28px' }}>AGENTIC CAPABILITIES</div>
-           <div className="capability-item"><CheckIcon /> Local Sandbox Active</div>
+           <div className="nav-group-title" style={{ marginTop: '24px' }}>CAPABILITIES</div>
+           <div className="capability-item"><CheckIcon /> Local Math Sandbox</div>
            <div className="capability-item"><CheckIcon /> 100% GPU Accelerated</div>
            <div className="capability-item"><CheckIcon /> Atomic Knowledge Graph</div>
            <div className="capability-item"><CheckIcon /> Air-Gapped Sovereign Node</div>
         </div>
         <div className="sidebar-footer">
-          <div className="security-status" style={{ marginBottom: '14px', fontSize: '0.8rem', color: '#2f9e44', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-            <ShieldIcon /> Air-Gapped Mode
+          <div className="security-status" style={{ marginBottom: '10px', fontSize: '0.78rem', color: '#2f9e44', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+            <ShieldIcon /> Air-Gapped Sovereign Node
           </div>
           <div 
-            className="hardware-metrics" 
-            title={`Active Engine: ${activeModel}\nHardware Device: ${gpuTelemetry.device}\nVRAM Status: ${gpuTelemetry.vram}\nLatency: ${inferenceLatency}`}
+            className="hardware-telemetry-subtle" 
+            title={`Inference: ${inferenceLatency} | Hardware: ${gpuTelemetry.device} | VRAM: ${gpuTelemetry.vram}`}
             onClick={callDummyTool}
-            style={{ cursor: 'pointer' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span>INFERENCE:</span> 
-              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>{inferenceLatency}</span>
+            <div className="subtle-metric-row">
+              <span className="subtle-label">Inf:</span>
+              <span className="subtle-value">{inferenceLatency}</span>
+              <span className="subtle-sep">·</span>
+              <span className="subtle-label">GPU:</span>
+              <span className="subtle-value">{gpuTelemetry.status.includes('100%') ? '100% VRAM' : 'Offload'}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>GPU ACCEL:</span> 
-              <span style={{ color: 'var(--text-dark)', fontWeight: 600 }}>{gpuTelemetry.status}</span>
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="subtle-device-line">
               ⚡ {gpuTelemetry.device}
             </div>
           </div>
-          <div className="operator-block">
-             <span className="dot active"></span> {username}
+          <div className="operator-profile-row">
+             <div className="operator-profile-info">
+               <span className="operator-avatar"><OperatorIcon /></span>
+               <div className="operator-meta">
+                 <span className="operator-username">{username || 'operator'}</span>
+                 <span className="operator-status"><span className="dot active"></span> Active Session</span>
+               </div>
+             </div>
+             <button type="button" onClick={() => setToken(null)} className="disconnect-icon-btn" title="Sign out session">
+               <LogOutIcon />
+             </button>
           </div>
-          <button type="button" onClick={() => setToken(null)} className="disconnect-btn">Disconnect</button>
         </div>
       </aside>
 
       <main className="workspace main-console">
         <div className="topbar">
            <div className="topbar-left">
-             <h2>Workspace: <span>Industrial Knowledge Workspace</span></h2>
+             <h2>Workspace: <span>Industrial Intelligence Console</span></h2>
              <div className="model-status">
                <CpuIcon /> {activeModel}
              </div>
            </div>
 
            <div className="topbar-right">
+             <button 
+               type="button" 
+               className="theme-toggle-btn" 
+               onClick={toggleTheme} 
+               title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+             >
+               {theme === 'light' ? <><MoonIcon /> <span>Dark</span></> : <><SunIcon /> <span>Light</span></>}
+             </button>
              <button type="button" className="topbar-clear-btn" onClick={handleClearChat} title="Clear conversation history">
                <TrashIcon /> Clear Chat
              </button>
@@ -1090,31 +1114,54 @@ function App() {
         <div className="feed-scrollable">
           {history.length === 0 && (
             <div className="blank-canvas">
-              <h3>Air-gapped industrial terminal connected.</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '-18px', marginBottom: '28px' }}>
-                Ask complex engineering calculations, SOP safety workflows, or failure diagnostics.
+              <div className="blank-crest">
+                <ShieldIcon />
+              </div>
+              <h3 className="blank-title">Sovereign Industrial Intelligence</h3>
+              <p className="blank-subtitle">
+                Autonomous on-premise technical reasoning, verified AST calculations, and engineering documentation.
               </p>
-              <div className="onboarding-cards">
-                <div className="card" onClick={() => handleQuery(undefined, "Calculate the heat duty for a shell-and-tube heat exchanger cooling 40,000 kg/h of crude oil from 190°C to 110°C (assume Cp = 2.3 kJ/kg·°C). Provide an executive summary and generate a formal Word report.")}>
-                   <div className="card-badge">THERMAL ENG</div>
-                   <h4>🌡️ Heat Exchanger Duty</h4>
-                   <p>Run mathematical calculations & generate a formal Word report.</p>
-                </div>
-                <div className="card highlight" onClick={() => handleQuery(undefined, "What are the primary safety protocols and emergency shutdown (ESD) procedures for industrial catalytic hydrocrackers?")}>
-                   <div className="card-badge">SAFETY SOP</div>
-                   <h4>⚠️ Hydrocracker Safety</h4>
-                   <p>Retrieve emergency shutdown procedures and API 521 compliance.</p>
-                </div>
-                <div className="card" onClick={() => handleQuery(undefined, "Audit the local CKKS homomorphic encryption parameters (8192 polynomial modulus, DP epsilon budget) and explain how confidential queries remain secure.")}>
-                   <div className="card-badge">SECURITY</div>
-                   <h4>🔐 Homomorphic Encryption</h4>
-                   <p>Inspect CKKS ciphertext security & differential privacy boundaries.</p>
-                </div>
-                <div className="card" onClick={() => handleQuery(undefined, "Explain the governing thermal principles for heat exchanger network pinch analysis and how to determine the minimum hot and cold utility requirements.")}>
-                   <div className="card-badge">OPTIMIZATION</div>
-                   <h4>📐 Pinch Network Analysis</h4>
-                   <p>Calculate minimum utility targets and pinch point temperatures.</p>
-                </div>
+              
+              <div className="blank-capabilities-strip">
+                <div className="strip-item"><CheckIcon /> Zero Exfiltration</div>
+                <div className="strip-item"><CheckIcon /> Local {activeModel}</div>
+                <div className="strip-item"><CheckIcon /> Verified AST Math Sandbox</div>
+              </div>
+
+              {/* Quick Action Prompt Chips */}
+              <div className="quick-prompt-chips">
+                <button 
+                  type="button" 
+                  className="quick-chip"
+                  onClick={() => { setQuery("Calculate Reynolds number for water at 20°C with velocity 1.5 m/s in a 50mm pipe"); textareaRef.current?.focus(); }}
+                >
+                  <span className="chip-icon">📐</span>
+                  <span className="chip-text">Calculate Reynolds Number</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-chip"
+                  onClick={() => { setQuery("Compute ASME Section VIII minimum shell wall thickness for 15 bar pressure, 1.2m diameter"); textareaRef.current?.focus(); }}
+                >
+                  <span className="chip-icon">⚙️</span>
+                  <span className="chip-text">ASME Section VIII Pressure Vessel</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-chip"
+                  onClick={() => { setQuery("What is the standard startup sequence and SOP for a shell-and-tube heat exchanger?"); textareaRef.current?.focus(); }}
+                >
+                  <span className="chip-icon">📋</span>
+                  <span className="chip-text">Heat Exchanger Startup SOP</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-chip"
+                  onClick={() => { setResearchMode(true); setQuery("Recent developments in catalytic cracking reactor bed pressure drop equations"); textareaRef.current?.focus(); }}
+                >
+                  <span className="chip-icon">🔬</span>
+                  <span className="chip-text">Catalytic Cracker Literature</span>
+                </button>
               </div>
             </div>
           )}
@@ -1129,17 +1176,20 @@ function App() {
                   </div>
                   <div className="content-column">
                     <div className="message-header">
-                      <div className="sender-name">{isUser ? username : 'Lexicon Engine'}</div>
+                      <div className="sender-name">{isUser ? (username || 'Operator') : 'Sovereign Agent'}</div>
+                      <span className={`sender-badge ${isUser ? 'user-badge' : 'agent-badge'}`}>
+                        {isUser ? 'Operator' : activeModel}
+                      </span>
                     </div>
                     
                     {msg.thinking && (
-                       <details className="deepseek-thought-drawer" open={false}>
-                         <summary className="thought-summary">
-                           <span className="thought-icon">🧠</span>
-                           <span className="thought-label">Thought for 2.4s</span>
-                           <span className="thought-badge">DeepThink (R1) Trace</span>
+                       <details className="reasoning-trace-drawer" open={false}>
+                         <summary className="reasoning-summary">
+                           <span className="reasoning-icon">⚡</span>
+                           <span className="reasoning-label">Reasoning Process</span>
+                           <span className="reasoning-badge">Execution Trace</span>
                          </summary>
-                         <div className="thought-content">
+                         <div className="reasoning-content">
                            {msg.thinking}
                          </div>
                        </details>
@@ -1161,7 +1211,10 @@ function App() {
               <div className="thread-item agent-item loading-item">
                  <div className="avatar-column"><NodeIcon /></div>
                  <div className="content-column">
-                    <div className="sender-name">Lexicon Engine</div>
+                    <div className="message-header">
+                      <div className="sender-name">Sovereign Agent</div>
+                      <span className="sender-badge agent-badge">{activeModel}</span>
+                    </div>
                     <div className="activity-indicator">
                        <div className="tracer-bar">
                          <div className="tracer-progress"></div>
@@ -1175,14 +1228,14 @@ function App() {
           </div>
         </div>
 
-        {/* WORLD-CLASS DEEPSEEK-STYLE DOCKED COMPOSER */}
+        {/* MODERN SOVEREIGN DOCKED COMPOSER */}
         <div className="docked-composer">
           <form onSubmit={handleQuery} className="composer-card">
             {/* Top Textarea Area */}
             <div className="composer-input-row">
               <textarea 
                 ref={textareaRef}
-                placeholder="Ask about TEMA heat exchangers, catalytic SOPs, or run engineering calculations..." 
+                placeholder="Ask technical calculations, analyze equipment manuals, or query plant SOPs..." 
                 value={query} 
                 onChange={e => setQuery(e.target.value)} 
                 onInput={autoResizeTextarea}
@@ -1195,7 +1248,7 @@ function App() {
             {/* Bottom Actions Toolbar */}
             <div className="composer-toolbar">
               <div className="toolbar-left">
-                {/* File Attachment Hidden Input & Button */}
+                {/* File Attachment Hidden Input & Button (Icon Only) */}
                 <input 
                   id="file-upload" 
                   type="file" 
@@ -1207,32 +1260,31 @@ function App() {
                 />
                 <button 
                   type="button" 
-                  className="toolbar-btn attach-btn" 
+                  className="toolbar-icon-btn" 
                   onClick={() => fileInputRef.current?.click()} 
-                  title="Upload & Ingest PDF into Knowledge Graph"
+                  title="Attach technical PDF to ingest into Knowledge Graph"
                   disabled={loading}
                 >
                   <PaperclipIcon />
-                  <span className="btn-label">Attach PDF</span>
                 </button>
 
-                {/* DeepSeek R1-Style DeepThink / Deep Research Pill */}
+                {/* Research Mode Toggle Pill */}
                 <button
                   type="button"
-                  className={`toolbar-pill deepthink-pill ${researchMode ? 'active' : ''}`}
+                  className={`toolbar-pill research-toggle-pill ${researchMode ? 'active' : ''}`}
                   onClick={() => setResearchMode(prev => !prev)}
-                  title={researchMode ? "Deep Research Mode ON: SerpAPI & Google Scholar literature search active" : "Deep Research Mode OFF: Pure sovereign air-gapped fast inference"}
+                  title={researchMode ? "Research Mode ON: Queries external Google Scholar literature via SerpAPI" : "Research Mode OFF: Pure sovereign air-gapped execution"}
                   disabled={loading}
                 >
                   <span className="pill-icon"><SparkleIcon /></span>
-                  <span className="pill-title">Deep Research</span>
+                  <span className="pill-title">Research Mode</span>
                   <span className="pill-status">{researchMode ? 'ON' : 'OFF'}</span>
                 </button>
 
                 {/* Air-gap / Privacy Mode Indicator */}
                 <div className={`toolbar-pill airgap-pill ${researchMode ? 'research-active' : ''}`} title="Air-gap containment status">
                   <span className="airgap-dot"></span>
-                  <span className="pill-title">{researchMode ? 'Scholar Literature' : 'Air-Gap Isolated'}</span>
+                  <span className="pill-title">{researchMode ? 'Research Active' : 'Strict Air-Gap'}</span>
                 </div>
               </div>
 
@@ -1328,28 +1380,20 @@ function App() {
              ) : (
                !loading && (
                  <div className="collateral-empty-state">
-                   <div className="empty-state-icon"><SparkleIcon /></div>
-                   <div className="empty-state-title">Deep Research is {researchMode ? 'Active' : 'Off'}</div>
+                   <div className="empty-state-icon"><AcademicCapIcon /></div>
+                   <div className="empty-state-title">Research Mode is {researchMode ? 'Active' : 'Standby'}</div>
                    <div className="empty-state-sub">
                      {researchMode 
                        ? "Ask an industrial query to fetch and cross-reference literature from Google Scholar."
                        : "External SerpAPI and Google Scholar calls are disabled for strict air-gapped operation."}
                    </div>
-                   {!researchMode ? (
+                   {!researchMode && (
                      <button 
                        type="button" 
-                       className="enable-deepresearch-btn"
+                       className="enable-research-btn"
                        onClick={() => setResearchMode(true)}
                      >
-                       Enable Deep Research
-                     </button>
-                   ) : (
-                     <button 
-                       type="button" 
-                       className="load-starter-papers-btn"
-                       onClick={() => setScholarResults(DEFAULT_SCHOLAR_PAPERS)}
-                     >
-                       Load Reference Literature
+                       Enable Research Mode
                      </button>
                    )}
                  </div>

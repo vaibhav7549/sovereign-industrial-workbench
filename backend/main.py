@@ -695,7 +695,7 @@ async def query_agent(query: str, token: str, research_mode: bool = False):
                 thinking.append(f"💭 Agent thought: {msg.content}")
 
         if research_mode:
-            thinking.append("🔬 Deep Research Mode: Activated. Extracting domain concepts and retrieving academic literature via Google Scholar / SerpAPI.")
+            thinking.append("🔬 Research Mode: Activated. Extracting domain concepts and retrieving academic literature via Google Scholar / SerpAPI.")
         else:
             thinking.append("🛡️ Sovereign Air-Gap Mode: Pure local inference. External SerpAPI & Google Scholar lookups bypassed.")
 
@@ -746,11 +746,11 @@ async def query_agent(query: str, token: str, research_mode: bool = False):
             f"- Alternatively, update `LLM_BASE_URL` and `LLM_MODEL` in your `backend/.env` file.\n"
         )
         if research_mode:
-            response_text += "- Deep Research Mode is ON: Google Scholar research literature matching your query concepts has been retrieved below.\n"
+            response_text += "- Research Mode is ON: Google Scholar research literature matching your query concepts has been retrieved below.\n"
         else:
-            response_text += "- Deep Research Mode is OFF: External SerpAPI calls are bypassed to maintain strict air-gap compliance.\n"
+            response_text += "- Research Mode is OFF: External SerpAPI calls are bypassed to maintain strict air-gap compliance.\n"
 
-        thinking_text = f"Fallback mechanism activated: Local inference node ({base_url}) unreachable ({str(e)}). {'Deep research mode enabled.' if research_mode else 'Pure air-gapped mode.'}"
+        thinking_text = f"Fallback mechanism activated: Local inference node ({base_url}) unreachable ({str(e)}). {'Research mode enabled.' if research_mode else 'Pure air-gapped mode.'}"
         
         scholar_results = {}
         if research_mode:
