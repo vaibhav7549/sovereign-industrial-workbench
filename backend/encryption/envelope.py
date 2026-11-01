@@ -9,7 +9,6 @@ carry no information about the document.
 
 from __future__ import annotations
 
-import io
 import json
 import re
 from dataclasses import dataclass
@@ -28,22 +27,23 @@ class Chunk:
 
 # ---------------------------------------------------------------- extraction
 def extract_pages(filename: str, data: bytes) -> List[Tuple[Optional[int], str]]:
+    """Non-empty (page, text) pairs. PDFs get the OCR fallback for scanned pages (pdf_text.py)."""
+    return extract_pages_with_ocr(filename, data)[0]
+
+
+def extract_pages_with_ocr(filename: str, data: bytes) -> Tuple[List[Tuple[Optional[int], str]], Optional[dict]]:
+    """Like extract_pages(), plus the OCR summary for PDFs (None for text files)."""
     name = (filename or "").lower()
     if name.endswith(".pdf") or data[:5] == b"%PDF-":
-        import pypdf
+        from pdf_text import extract_pdf_pages  # backend/pdf_text.py (shared with the plaintext path)
 
-        reader = pypdf.PdfReader(io.BytesIO(data))
-        pages = []
-        for i, page in enumerate(reader.pages):
-            t = page.extract_text() or ""
-            if t.strip():
-                pages.append((i + 1, t))
-        return pages
+        all_pages, report = extract_pdf_pages(data)
+        return [(n, t) for n, t in all_pages if t.strip()], report.summary()
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
         text = data.decode("latin-1")
-    return [(None, text)] if text.strip() else []
+    return ([(None, text)] if text.strip() else []), None
 
 
 # ------------------------------------------------------------------ chunking

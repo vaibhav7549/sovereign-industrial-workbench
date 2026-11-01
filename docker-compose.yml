@@ -49,6 +49,10 @@ services:
       # Named volume, not a file bind-mount: binding a host file that does not exist yet
       # makes Docker create a *directory* at that path and context loading fails.
       - sovereign-crypto:/data
+    # RAM-backed /tmp: OCR writes short-lived plaintext page images and PDF copies there
+    # (pdf2image, pytesseract). tmpfs keeps them off disk and they vanish on container stop.
+    tmpfs:
+      - /tmp:size=512m
     restart: unless-stopped
 
   frontend:

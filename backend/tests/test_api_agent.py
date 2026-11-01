@@ -193,3 +193,26 @@ def test_summarize_allowed_link_is_fetched_once_without_auto_redirects(app, web)
     r = summarize(app, token=app.token)
     assert r.status_code == 200 and r.json()["status"] in ("ok", "fallback")
     assert len(web.requested) == 1 and web.requested[0][1]["allow_redirects"] is False
+
+
+# ----------------------------------------------------------------------------- /ingest/pdf OCR (Task 2)
+def test_plain_ingest_pdf_reports_ocr_and_survives_page_failure(app, monkeypatch):
+    """Encryption off: /ingest/pdf -> _ingest_plain_document -> pdf_text OCR fallback."""
+    import io
+
+    import pdf_text
+    from test_pdf_ocr import LONG_TEXT, fake_ocr, make_text_pdf
+
+    monkeypatch.setattr(pdf_text, "ocr_available", lambda: (True, ""))
+    monkeypatch.setattr(pdf_text, "ocr_page_image",
+                        fake_ocr({2: RuntimeError("boom"), 3: "Scanned flange torque table for page three"}))
+    pdf = make_text_pdf([LONG_TEXT, "", ""])
+    r = app.post("/ingest/pdf", params={"token": app.token},
+                 files={"file": ("scan.pdf", io.BytesIO(pdf), "application/pdf")}).json()
+
+    assert r["status"] == "success"
+    assert r["ocr_pages"] == 1 and r["ocr_page_numbers"] == [3]
+    assert r["ocr_warnings"] == ["page 2: OCR failed (RuntimeError: boom); kept pypdf text"]
+    content = [a for t, a in app.atomic.received if t == "create_atom"][0]["content"]
+    assert content.startswith("## Page 1\n") and "## Page 3\nScanned flange torque table" in content
+    assert "## Page 2" not in content                    # failed page kept its (empty) pypdf text

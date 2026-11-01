@@ -26,7 +26,8 @@ import numpy as np
 
 from .audit import AuditLog, Timer
 from .dp import DPParams, laplace_embedding
-from .envelope import SOURCE_SCHEME, build_envelope, chunk_pages, extract_pages, parse_mcp_tool_result
+from .envelope import (SOURCE_SCHEME, build_envelope, chunk_pages, extract_pages,  # noqa: F401
+                       extract_pages_with_ocr, parse_mcp_tool_result)
 from .he import HEEvaluator, HEKeyHolder, HEParams
 from .keys import KeyRing
 from .vault import ChunkRow, EncryptedVault, TamperError, sha256_hex
@@ -139,10 +140,11 @@ class SecurePipeline:
     async def ingest(self, filename: str, data: bytes, actor: str) -> dict:
         t0 = time.perf_counter()
         doc_id = str(uuid.uuid4())
-        pages = extract_pages(filename, data)
+        pages, ocr = extract_pages_with_ocr(filename, data)   # ocr: OCR summary for PDFs, None otherwise
         chunks = chunk_pages(pages, self.cfg.chunk_size, self.cfg.chunk_overlap)
         if not chunks:
-            raise ValueError("no extractable text in document")
+            hint = f" (OCR: {'; '.join(ocr['ocr_warnings'])})" if ocr and ocr["ocr_warnings"] else ""
+            raise ValueError(f"no extractable text in document{hint}")
         if len(chunks) > self.cfg.max_chunks_per_doc:
             raise ValueError(f"document produces {len(chunks)} chunks (limit MAX_CHUNKS_PER_DOC="
                              f"{self.cfg.max_chunks_per_doc})")
@@ -207,6 +209,7 @@ class SecurePipeline:
             ct_sha256=[r.ct_sha256[:16] for r in rows], dp=dp_desc,
             title_fp=self.keys.fingerprint(filename or ""), envelope_bytes=len(envelope),
             atomic_status="stored" if atom_id else f"not stored: {err}",
+            ocr_pages=(ocr or {}).get("ocr_pages", 0), ocr_warning_count=len((ocr or {}).get("ocr_warnings", [])),
             ms={"embed": t_embed.ms, "dp_and_encrypt": t_he.ms, "atomic": t_mcp.ms,
                 "total": round((time.perf_counter() - t0) * 1000, 2)},
         )
@@ -216,6 +219,10 @@ class SecurePipeline:
             "status": "ingested_encrypted" if atom_id else "ingested_encrypted_vault_only",
             "chunks": len(chunks),
             "atomic_error": err,
+            # How many pages came from OCR, which ones, and any per-page OCR problems (no document text).
+            "ocr_pages": (ocr or {}).get("ocr_pages", 0),
+            "ocr_page_numbers": (ocr or {}).get("ocr_page_numbers", []),
+            "ocr_warnings": (ocr or {}).get("ocr_warnings", []),
             "encryption_metadata": {
                 "text_cipher": "AES-256-GCM (HKDF-derived key, AAD-bound to doc/chunk)",
                 "embedding_scheme": "CKKS", "he_context_id": self.holder.context_id,

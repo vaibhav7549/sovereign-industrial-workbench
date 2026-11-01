@@ -245,7 +245,7 @@ async def ingest_pdf_impl(deps: ToolDeps, filename: str) -> str:
         res = await deps.ingest_bytes(os.path.basename(path), data, deps.actor)
     except Exception as e:
         return json.dumps({"error": f"ingestion failed: {type(e).__name__}: {e}"})
-    keep = ("status", "atom_id", "doc_id", "chunks", "message", "error", "atomic_error")
+    keep = ("status", "atom_id", "doc_id", "chunks", "message", "error", "atomic_error", "ocr_pages", "ocr_warnings")
     return json.dumps({k: res[k] for k in keep if k in res})
 
 

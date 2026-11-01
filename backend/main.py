@@ -380,19 +380,20 @@ def _ingest_inbox_dir() -> str:
 async def _ingest_plain_document(filename: str, content: bytes) -> Dict:
     """Legacy path (ENCRYPTION_ENABLED=false): pypdf text -> one plaintext atom via MCP."""
     try:
-        import pypdf
-        import io
+        import pypdf  # noqa: F401  (clear error if missing)
     except Exception as e:
         return {"error": f"Failed to import pypdf: {str(e)}. Run pip install pypdf"}
 
     try:
-        pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+        # pypdf first; scanned pages (< PDF_OCR_MIN_CHARS chars) are OCR'd locally (pdf_text.py).
+        from pdf_text import extract_pdf_pages
+
+        pages, ocr_report = extract_pdf_pages(content)
 
         text_pages = []
-        for i, page in enumerate(pdf_reader.pages):
-            page_text = page.extract_text()
+        for page_no, page_text in pages:
             if page_text:
-                text_pages.append(f"## Page {i+1}\n{page_text}")
+                text_pages.append(f"## Page {page_no}\n{page_text}")
 
         markdown_content = "\n\n".join(text_pages)
         if not markdown_content.strip():
@@ -411,7 +412,8 @@ async def _ingest_plain_document(filename: str, content: bytes) -> Dict:
             "status": "success",
             "message": "PDF converted to text and ingested into Centralized Knowledge Graph",
             "markdown_snippet": snippet,
-            "kg_result": kg_result
+            "kg_result": kg_result,
+            **ocr_report.summary(),   # ocr_pages, ocr_page_numbers, ocr_warnings
         }
     except Exception as e:
         return {"error": str(e)}

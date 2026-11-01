@@ -21,3 +21,8 @@ tenseal>=0.3.13          # Homomorphic encryption (CKKS, Microsoft SEAL). Wheels
 numpy>=1.24.0            # Linear algebra for embeddings / DP noise
 cryptography>=42.0.0     # AES-256-GCM + HKDF key management
 # opacus/torch (training-time DP) are optional: see requirements-dp-training.txt
+
+# --- OCR fallback for scanned PDF pages (Task 2). Needs the tesseract-ocr, tesseract-ocr-eng and
+# poppler-utils system packages (installed in the Dockerfile). Pillow comes in as their dependency.
+pytesseract>=0.3.10      # Apache-2.0: runs the local tesseract binary
+pdf2image>=1.16.0        # MIT: renders PDF pages via poppler's pdftoppm
