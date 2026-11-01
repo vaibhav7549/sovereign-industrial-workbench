@@ -173,21 +173,26 @@ You can run the workbench either **Locally (Bare Metal)** or with **Docker Compo
 
 ---
 
-### Method 2: Running with Docker Compose
+### Method 2: Running with Docker Compose (HTTPS, two-laptop demo)
 
-If you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed, you can build and run both frontend and backend with a single command:
+Linux host. Nginx serves the UI and the API over TLS on port 443. The backend listens only on `127.0.0.1:8000`, so it is not reachable from the LAN.
 
-1. In the project root directory, run:
+1. Create the TLS certificates once, and again whenever the LAN IP changes:
    ```bash
-   docker compose up --build
+   ./scripts/gen_tls_cert.sh 192.168.1.42   # your Wi-Fi/hotspot IP (hostname -I)
+   ./scripts/gen_tls_cert.sh                # local mode: localhost only
    ```
+2. Start:
+   ```bash
+   docker compose up -d --build
+   ```
+3. On the client laptop, trust `certs/ca/ca.crt` (never copy `ca.key`). Then open:
+   - **Remote mode**: `https://<LAN_IP>/`
+   - **Local mode**: `https://localhost/`
+   - API: `https://<host>/api/...`. Swagger docs are available only on the server at `http://127.0.0.1:8000/docs`.
 
-2. Access the services:
-   - **Frontend UI**: `http://localhost:5173`
-   - **Backend API**: `http://localhost:8000`
-   - **Swagger Docs**: `http://localhost:8000/docs`
-
-3. To shut down the containers:
+   Trust steps for Ubuntu and Windows, plus verification commands, are in [`docs/TLS_SETUP.md`](docs/TLS_SETUP.md).
+4. Shut down:
    ```bash
    docker compose down
    ```
@@ -273,9 +278,10 @@ Once both servers are running and you open `http://localhost:5173`:
 | `LLM_MODEL` | `qwen2.5-7b-instruct-1m` | Open-weight model name loaded in local engine |
 | `LLM_API_KEY` | `1234` | API authorization key for inference endpoint |
 | `MCP_URL` | `http://localhost:8080/mcp` | Centralized Atomic Model Context Protocol server URL |
-| `MCP_AUTH_HEADER` | `Bearer at_aoUQ...` | Authorization token for MCP server |
-| `SERPAPI_KEY` | *(included demo key)* | SerpAPI key for Google Scholar academic search |
-| `VITE_API_URL` | `http://localhost:8000` | Frontend backend gateway URL |
+| `MCP_AUTH_HEADER` | *(none; set in `backend/.env`)* | Authorization token for MCP server |
+| `SERPAPI_KEY` | *(none; set in `backend/.env`)* | SerpAPI key for Google Scholar academic search. Leave empty for air-gapped use |
+| `CORS_ALLOW_ORIGINS` | *(local origins)* | Exact CORS allow-list, comma separated. `SERVER_LAN_IP` adds `https://<LAN_IP>` |
+| `VITE_API_URL` | `/api` | Frontend API base. Relative, proxied by Nginx (Docker) or Vite (dev) |
 
 ---
 
@@ -286,7 +292,7 @@ Once both servers are running and you open `http://localhost:5173`:
 | `GET /` | `GET` | Health check, active model, and runtime endpoint status |
 | `POST /login` | `POST` | Authenticates operator username and issues session UUID |
 | `POST /agent/query` | `POST` | Agent reasoning loop, tool execution, and keyword extraction |
-| `POST /agent/summarize` | `POST` | Scrapes paper URLs and produces LexRank extractive summary |
+| `POST /agent/summarize` | `POST` | LexRank summary of a Scholar result link. Needs `token` (401 otherwise); every redirect hop is checked, and internal addresses are refused |
 | `POST /agent/tool` | `POST` | Direct invocation of MCP Knowledge Graph tools |
 | `POST /ingest/pdf` | `POST` | Multipart PDF/text upload. With encryption on: DP noise + CKKS + AES-GCM, then MCP atom ingestion |
 | `POST /agent/verify-encryption` | `POST` | Encryption status, DP epsilon, encrypted atom count, audit-chain integrity |
@@ -319,7 +325,11 @@ Tests: `cd backend && python -m pytest -q tests`. Benchmark: `taskset -c 0 pytho
 - **PowerShell Script Execution Error:**
   Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in your PowerShell window before activating the virtual environment.
 - **Docker cannot reach local LM Studio / Ollama:**
-  Ensure you use `http://host.docker.internal:1234/v1` (or `11434`) as defined in `docker-compose.yml` so Docker containers can communicate with the host machine.
+  Both containers use host networking, so `http://localhost:11434/v1` in `docker-compose.yml` is the host's Ollama. Keep Ollama on its default `127.0.0.1` binding. Do not set `OLLAMA_HOST=0.0.0.0`.
+- **Frontend container keeps restarting:**
+  `docker compose logs frontend` shows `[tls] ... missing`. Run `./scripts/gen_tls_cert.sh <LAN_IP>` and start again.
+- **Browser shows a certificate warning:**
+  The client has not trusted `certs/ca/ca.crt` yet, or you opened an IP that isn't in the certificate. See `docs/TLS_SETUP.md`.
 - **NLTK Tokenizer warnings:**
   The backend automatically downloads missing `punkt` and `punkt_tab` datasets at startup and inside Docker.
 

@@ -77,9 +77,20 @@ def main():
     ap.add_argument("--dim", type=int, default=768)
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--json-out")
+    ap.add_argument("--allow-stub", action="store_true",
+                    help="permit --json-out without TenSEAL (writes numpy stand-in numbers)")
     a = ap.parse_args()
 
     params = HEParams(n_threads=1)
+
+    if not _HAVE_TENSEAL and a.json_out and not a.allow_stub:
+        # A stub result file is easy to mistake for a real measurement, so refuse to write one.
+        print("ERROR: tenseal is not installed, so these would be numpy stand-in numbers, not CKKS.")
+        print("       Run inside the backend container instead:")
+        print("       docker compose exec backend taskset -c 0 python scripts/bench_he_latency.py "
+              "--json-out /data/bench_he.json")
+        print("       (or pass --allow-stub to write stand-in numbers anyway)")
+        raise SystemExit(2)
 
     if not _HAVE_TENSEAL:
         print("WARNING: tenseal not installed — using numpy stand-in.")
@@ -90,7 +101,7 @@ def main():
         keygen_s = 0.0
     else:
         t = time.perf_counter()
-        holder = HEKeyHolder.create(params)
+        holder, _raw = HEKeyHolder.create(params)  # create() returns (holder, serialized_ctx)
         keygen_s = time.perf_counter() - t
         ev = HEEvaluator(holder.public_context_bytes(), n_threads=1)
     rng = np.random.default_rng(42)

@@ -28,4 +28,6 @@ VOLUME ["/data"]
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# HOST/PORT come from the environment. docker-compose.yml sets HOST=127.0.0.1 so that, with host
+# networking, the API is reachable only through Nginx on :443 and never directly from the LAN.
+CMD ["sh", "-c", "exec uvicorn main:app --host \"${HOST:-0.0.0.0}\" --port \"${PORT:-8000}\""]

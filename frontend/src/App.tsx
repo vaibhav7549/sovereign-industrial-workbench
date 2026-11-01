@@ -39,9 +39,10 @@ const SparkleIcon = () => (
   </svg>
 );
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Relative by default: Nginx (Docker) and the Vite dev server both proxy /api to the backend.
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
-function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: string, results: {title: string, link: string}[], onOpenSummary: (data: any)=>void }) {
+function ScholarKeywordSection({ keyword, results, onOpenSummary, token }: { keyword: string, results: {title: string, link: string}[], onOpenSummary: (data: any)=>void, token: string }) {
   const [expanded, setExpanded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [summaryData, setSummaryData] = useState<Record<number, any>>({});
@@ -55,7 +56,8 @@ function ScholarKeywordSection({ keyword, results, onOpenSummary }: { keyword: s
     hoverTimer.current = window.setTimeout(async () => {
       setSummaryData(prev => ({...prev, [idx]: { loading: true }}));
       try {
-         const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(r.link)}&title=${encodeURIComponent(r.title)}`, { method: 'POST' });
+         const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(r.link)}&title=${encodeURIComponent(r.title)}&token=${encodeURIComponent(token)}`, { method: 'POST' });
+         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
          const data = await resp.json();
          setSummaryData(prev => ({...prev, [idx]: data}));
       } catch (e) {
@@ -540,7 +542,7 @@ function App() {
                <div className="nav-group-title" style={{ marginTop: '0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>RESEARCH PAPERS (SCHOLAR)</div>
                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '32px', position: 'relative' }}>
                  {Object.entries(scholarResults).map(([keyword, results]) => (
-                   <ScholarKeywordSection key={keyword} keyword={keyword} results={results} onOpenSummary={setActiveSummary} />
+                   <ScholarKeywordSection key={keyword} keyword={keyword} results={results} onOpenSummary={setActiveSummary} token={token ?? ''} />
                  ))}
                </div>
              </>

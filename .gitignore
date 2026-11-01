@@ -47,3 +47,11 @@ docker-compose.yml
 backend/data/
 *.enc
 vault.sqlite3*
+
+# TLS material from scripts/gen_tls_cert.sh - never commit (contains private keys)
+certs/
+
+# Editor/backup copies
+*.bak
+# Runtime output of the agent's generate_word_report_tool (written to the backend working dir)
+backend/sandbox_report.docx

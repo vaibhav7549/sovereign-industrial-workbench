@@ -1,4 +1,14 @@
-version: '3.8'
+# Sovereign Workbench - default deployment (Laptop A).
+#
+# Network layout (Task 1):
+#   LAN  --HTTPS :443-->  Nginx (frontend container, host network)  --HTTP-->  127.0.0.1:8000 backend
+#   Port 80 only redirects to 443. The backend binds to loopback, so http://<LAN_IP>:8000 is closed.
+#
+# Both containers use host networking because Ollama (:11434) and the Atomic MCP server (:8080)
+# listen on the host's loopback. A bridge network would force those to listen on 0.0.0.0 and
+# expose them to the LAN instead. Linux hosts only (Docker Desktop handles host networking differently).
+#
+# Before the first start:  ./scripts/gen_tls_cert.sh <LAN_IP>   (no IP = local mode, https://localhost)
 
 services:
   backend:
@@ -14,12 +24,16 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - HOST=0.0.0.0
+      # Loopback only: reachable from Nginx on this host, not from the LAN.
+      - HOST=127.0.0.1
       - PORT=8000
       - LLM_BASE_URL=http://localhost:11434/v1
       - LLM_MODEL=qwen2.5:3b
       - LLM_API_KEY=ollama
       - MCP_URL=http://localhost:8080/mcp
+      # Exact CORS allow-list; SERVER_LAN_IP is written to ./.env by scripts/gen_tls_cert.sh.
+      - SERVER_LAN_IP=${SERVER_LAN_IP:-}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-}
       # --- Encryption layer ---
       - ENCRYPTION_ENABLED=true
       - ENCRYPTION_DATA_DIR=/data
@@ -42,10 +56,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://localhost:8000
+        # Relative: the browser calls https://<this host>/api/..., proxied by Nginx.
+        - VITE_API_URL=/api
     container_name: sovereign-frontend
-    ports:
-      - "5173:80"
+    # Listens on the host's :80 and :443 directly (ports: mappings do not apply with host networking).
+    network_mode: host
+    volumes:
+      # Only the server cert + key, read-only. The CA key (certs/ca/ca.key) is never mounted.
+      - ./certs/server:/etc/nginx/certs:ro
     depends_on:
       - backend
     restart: unless-stopped
