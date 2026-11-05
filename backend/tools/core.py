@@ -62,6 +62,8 @@ class ToolDeps:
     max_upload_bytes: int = 25 * 1024 * 1024
     resolve_host: Optional[Callable[[str], Awaitable[List[str]]]] = None  # injectable for tests
     http_get: Optional[Callable[..., Any]] = None  # requests.get-compatible; injectable for tests
+    # sandbox_run(code, timeout_s) -> result dict (backend/sandbox/client.run_code); None = no sandbox.
+    sandbox_run: Optional[Callable[[str, float], Awaitable[dict]]] = None
 
 
 # ----------------------------------------------------------------------------- tool selection
@@ -245,8 +247,26 @@ async def ingest_pdf_impl(deps: ToolDeps, filename: str) -> str:
         res = await deps.ingest_bytes(os.path.basename(path), data, deps.actor)
     except Exception as e:
         return json.dumps({"error": f"ingestion failed: {type(e).__name__}: {e}"})
-    keep = ("status", "atom_id", "doc_id", "chunks", "message", "error", "atomic_error", "ocr_pages", "ocr_warnings")
+    keep = ("status", "atom_id", "doc_id", "chunks", "message", "error", "atomic_error", "ocr_pages", "ocr_warnings",
+            "vision_pages", "vision_warnings")
     return json.dumps({k: res[k] for k in keep if k in res})
+
+
+SANDBOX_RESULT_KEYS = ("exit_code", "stdout", "stderr", "timed_out", "truncated", "oom_killed", "duration_ms")
+
+
+async def run_python_sandboxed_impl(deps: ToolDeps, code: str, timeout_s: float = 5.0) -> str:
+    """Run code in the isolated sandbox (no network, read-only FS, 256 MB, 0.5 CPU, <= 10 s)."""
+    if deps.sandbox_run is None:
+        return json.dumps({"error": "code sandbox is not configured"})
+    try:
+        timeout = float(timeout_s)
+    except (TypeError, ValueError):
+        timeout = 5.0
+    res = await deps.sandbox_run(code, timeout)
+    if "error" in res:
+        return json.dumps({"error": res["error"]})
+    return json.dumps({k: res.get(k) for k in SANDBOX_RESULT_KEYS})
 
 
 def write_word_report(executive_summary: str, math_output: str, directory: Optional[str] = None) -> str:

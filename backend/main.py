@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 
 from tools.core import FetchRefused, fetch_html_checked  # plain Python, no LangChain import
+from sandbox import client as sandbox_client  # sandbox-runner over its Unix socket (docs/SANDBOX.md)
 
 # Load configuration from .env file
 load_dotenv()
@@ -66,6 +67,11 @@ async def lifespan(app: FastAPI):
     if ENCRYPTION_ENABLED:
         # Context generation / unsealing is CPU-bound; keep the event loop free.
         await asyncio.to_thread(_init_encryption_layer)
+    import pdf_vision
+
+    if pdf_vision.vision_enabled():   # refuse non-local endpoints up front (also re-checked per document)
+        ok, reason = await asyncio.to_thread(pdf_vision.check_vision_endpoint, pdf_vision.vision_settings()["base_url"])
+        log.warning("PDF vision enabled: %s", f"endpoint {pdf_vision.vision_settings()['base_url']} OK" if ok else reason)
     yield
 
 app = FastAPI(
@@ -388,7 +394,8 @@ async def _ingest_plain_document(filename: str, content: bytes) -> Dict:
         # pypdf first; scanned pages (< PDF_OCR_MIN_CHARS chars) are OCR'd locally (pdf_text.py).
         from pdf_text import extract_pdf_pages
 
-        pages, ocr_report = extract_pdf_pages(content)
+        # Worker thread: OCR and vision can take minutes and must not block the event loop.
+        pages, ocr_report = await asyncio.to_thread(extract_pdf_pages, content)
 
         text_pages = []
         for page_no, page_text in pages:
@@ -440,6 +447,12 @@ def _build_llm(model_name: str, base_url: str, api_key: str):
 
     return ChatOpenAI(temperature=0, model=model_name, base_url=base_url, api_key=api_key)
 
+
+CODING_SYSTEM_PROMPT = (
+    "You are a careful engineering coding assistant. Write Python 3.11 (standard library only) and run it "
+    "with the run_python_sandboxed tool to check results before answering. The sandbox has no network and "
+    "no access to files outside /work. Show the final code and its output."
+)
 
 AGENT_SYSTEM_PROMPT = (
     "You are an intelligent sovereign industrial knowledge agent. Use the tools provided to look up "
@@ -503,8 +516,19 @@ async def query_agent(query: str, token: str):
         allowed_urls=urls_in_text(query) | set(_known_paper_urls),
         inbox_dir=_ingest_inbox_dir(),
         max_upload_bytes=_max_upload_bytes(),
+        sandbox_run=sandbox_client.run_code,
     )
-    tools = build_tools(tool_deps, select_tool_names(encrypted_mode))
+    # Router (router.py): coding -> an agent with only the sandbox tool; document, knowledge and
+    # general keep the current agent and its tools (which include ingest_pdf).
+    import router
+
+    route = await router.route_query(query)
+    if route.label == "coding":
+        tools = build_tools(tool_deps, ["run_python_sandboxed"])
+        system_prompt = CODING_SYSTEM_PROMPT
+    else:
+        tools = build_tools(tool_deps, select_tool_names(encrypted_mode))
+        system_prompt = AGENT_SYSTEM_PROMPT
     tool_calls: List[Dict[str, Any]] = []
 
     # Encrypted retrieval runs first, so small local models are always grounded in
@@ -542,7 +566,7 @@ async def query_agent(query: str, token: str):
     
     try:
         llm = _build_llm(model_name, base_url, api_key)
-        agent = create_tool_agent(llm, tools, AGENT_SYSTEM_PROMPT)
+        agent = create_tool_agent(llm, tools, system_prompt)
 
         # Run agent asynchronously
         res = await agent.ainvoke({"messages": [("user", agent_input)]})
@@ -560,7 +584,7 @@ async def query_agent(query: str, token: str):
             elif msg.content:
                 thinking.append(f"💭 Agent thought: {msg.content}")
 
-        thinking_text = "\n".join(thinking)
+        thinking_text = "\n".join([route.trace_line()] + thinking)
         
         # Keyword extraction & Scholar search
         scholar_results = {}
@@ -595,7 +619,7 @@ async def query_agent(query: str, token: str):
             f"- Alternatively, update `LLM_BASE_URL` and `LLM_MODEL` in your `backend/.env` file.\n"
             f"- Google Scholar research literature matching your query concepts has been retrieved below."
         )
-        thinking_text = f"Fallback mechanism activated: Local inference node ({base_url}) unreachable ({str(e)}). Proceeding with domain heuristic search."
+        thinking_text = route.trace_line() + "\n" + f"Fallback mechanism activated: Local inference node ({base_url}) unreachable ({str(e)}). Proceeding with domain heuristic search."
         tool_calls = []
         
         # Extract meaningful keywords from user query for Scholar search
@@ -623,6 +647,8 @@ async def query_agent(query: str, token: str):
         "scholar_results": scholar_results,
         # Agent tool calls: [{name, args, id, status, result_preview}]; empty in the fallback path.
         "tool_calls": tool_calls,
+        # Router decision: {label, method, score, matched, detail}. The only field Task 4 adds.
+        "route": route.as_dict(),
     }
     if encrypted_mode:
         response["encrypted_search"] = encrypted_search_summary
@@ -779,8 +805,18 @@ async def _summarize_paper_impl(url: str, title: str, fetch) -> Dict:
 
 @app.post("/dummy_tool")
 async def use_dummy_tool(input_val: str, token: str):
+    """Diagnostic Ping: a real sandbox health check. Runs print(1+1) in the isolated sandbox.
+
+    input_val is accepted for compatibility with the frontend and ignored: the checked code is fixed.
+    """
     user = get_current_user(token)
-    return {"status": "success", "user": user, "message": f"Diagnostic sandbox tool invoked with input: {input_val}"}
+    result = await sandbox_client.run_code("print(1+1)", timeout=5)
+    ok = result.get("exit_code") == 0 and (result.get("stdout") or "").strip() == "2"
+    if ok:
+        message = f"Sandbox OK: print(1+1) -> 2 in {result.get('duration_ms')} ms (network none, read-only, 256 MB)"
+    else:
+        message = f"Sandbox check failed: {result.get('error') or result.get('stderr') or result}"
+    return {"status": "success" if ok else "error", "user": user, "message": message, "sandbox": result}
 
 if __name__ == "__main__":
     import uvicorn

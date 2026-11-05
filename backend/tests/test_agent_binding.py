@@ -39,7 +39,7 @@ def run_agent(llm, tools, text="question"):
 def test_build_tools_names_and_order():
     names = select_tool_names(encrypted_mode=True)
     assert [t.name for t in build_tools(make_deps(), names)] == names
-    assert len(build_tools(make_deps())) == 6
+    assert len(build_tools(make_deps())) == 7   # + run_python_sandboxed (Task 3)
     with pytest.raises(ValueError):
         build_tools(make_deps(), ["rm_rf"])
 

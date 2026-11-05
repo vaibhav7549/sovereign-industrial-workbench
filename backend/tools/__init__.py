@@ -58,12 +58,21 @@ def build_tools(deps: ToolDeps, names: Optional[Sequence[str]] = None) -> List[A
         return await core.ingest_pdf_impl(deps, filename)
 
     @tool
+    async def run_python_sandboxed(code: str, timeout_s: float = 5.0) -> str:
+        """Run Python 3.11 code in an isolated sandbox and return its output.
+        The sandbox has no network, a read-only filesystem except /work (32 MB), 256 MB RAM,
+        half a CPU, at most 10 s, and only the standard library. Print what you need to see.
+        Returns JSON {exit_code, stdout, stderr, timed_out, truncated, oom_killed, duration_ms}."""
+        return await core.run_python_sandboxed_impl(deps, code, timeout_s)
+
+    @tool
     def generate_word_report_tool(executive_summary: str, math_output: str) -> str:
         """Combines the LLM executive summary and the verified math output into a styled Word document."""
         return core.write_word_report(executive_summary, math_output)
 
     available: Dict[str, Any] = {t.name: t for t in (
-        search_knowledge, search_mcp, get_wiki_tool, summarize_url, ingest_pdf, generate_word_report_tool)}
+        search_knowledge, search_mcp, get_wiki_tool, summarize_url, ingest_pdf, generate_word_report_tool,
+        run_python_sandboxed)}
     wanted = list(names) if names is not None else list(available)
     unknown = [n for n in wanted if n not in available]
     if unknown:

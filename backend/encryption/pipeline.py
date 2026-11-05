@@ -140,7 +140,8 @@ class SecurePipeline:
     async def ingest(self, filename: str, data: bytes, actor: str) -> dict:
         t0 = time.perf_counter()
         doc_id = str(uuid.uuid4())
-        pages, ocr = extract_pages_with_ocr(filename, data)   # ocr: OCR summary for PDFs, None otherwise
+        # Worker thread: OCR and vision can take minutes and must not block the event loop.
+        pages, ocr = await asyncio.to_thread(extract_pages_with_ocr, filename, data)  # ocr: summary or None
         chunks = chunk_pages(pages, self.cfg.chunk_size, self.cfg.chunk_overlap)
         if not chunks:
             hint = f" (OCR: {'; '.join(ocr['ocr_warnings'])})" if ocr and ocr["ocr_warnings"] else ""
@@ -210,6 +211,7 @@ class SecurePipeline:
             title_fp=self.keys.fingerprint(filename or ""), envelope_bytes=len(envelope),
             atomic_status="stored" if atom_id else f"not stored: {err}",
             ocr_pages=(ocr or {}).get("ocr_pages", 0), ocr_warning_count=len((ocr or {}).get("ocr_warnings", [])),
+            vision_pages=(ocr or {}).get("vision_pages", 0),
             ms={"embed": t_embed.ms, "dp_and_encrypt": t_he.ms, "atomic": t_mcp.ms,
                 "total": round((time.perf_counter() - t0) * 1000, 2)},
         )
@@ -223,6 +225,7 @@ class SecurePipeline:
             "ocr_pages": (ocr or {}).get("ocr_pages", 0),
             "ocr_page_numbers": (ocr or {}).get("ocr_page_numbers", []),
             "ocr_warnings": (ocr or {}).get("ocr_warnings", []),
+            **{k: v for k, v in (ocr or {}).items() if k.startswith("vision_")},   # only when vision is on
             "encryption_metadata": {
                 "text_cipher": "AES-256-GCM (HKDF-derived key, AAD-bound to doc/chunk)",
                 "embedding_scheme": "CKKS", "he_context_id": self.holder.context_id,

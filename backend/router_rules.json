@@ -1,0 +1,55 @@
+{
+  "_help": [
+    "Query router rules (backend/router.py). Edit freely; restart the backend to reload.",
+    "Each rule: a label, a weight and regex patterns (Python syntax, matched case-insensitively).",
+    "A query's score per label = sum of the weights of that label's rules with at least one matching pattern.",
+    "The highest score wins if it is >= min_score; ties go to the label listed first in 'labels'.",
+    "No label reaching min_score -> embedding fallback (ROUTER_EMBED_FALLBACK=true) or 'default'.",
+    "'examples' are only used by the embedding fallback: the closest example decides."
+  ],
+  "labels": ["document", "coding", "knowledge", "general"],
+  "default": "general",
+  "min_score": 2,
+  "rules": [
+    {"label": "coding", "weight": 3, "patterns": [
+      "\\bpython\\b", "\\b(write|writing|create|generate|fix)\\b.{0,40}\\b(script|function|program|code|class|regex|snippet)\\b",
+      "\\b(run|execute)\\b.{0,20}\\b(code|script|this)\\b", "\\btraceback\\b", "\\b\\w+error\\b:",
+      "\\bdebug\\b", "\\bregex\\b", "```", "\\bdef \\w+\\(", "\\bimport \\w+"
+    ]},
+    {"label": "coding", "weight": 2, "patterns": [
+      "\\b(calculate|compute|simulate|plot|graph|chart)\\b", "\\bstandard deviation\\b|\\bregression\\b|\\binterpolat",
+      "\\bunit conver|\\bconvert\\b.{0,30}\\bto\\b.{0,15}\\b(fahrenheit|celsius|kelvin|psi|bar|kpa|gpm)\\b"
+    ]},
+    {"label": "document", "weight": 5, "patterns": [
+      "\\b(ingest|upload|import|add|load)\\b.{0,60}\\b(pdf|file|document|manual|datasheet|scan|log|drawing)s?\\b",
+      "\\b(add|put|load)\\b.{0,60}\\b(into|to|in)\\b.{0,10}\\b(the )?knowledge (base|graph)\\b",
+      "\\bocr\\b", "\\bocr'?d\\b", "\\bscann(ed|ing)\\b", "\\.pdf\\b", "\\binbox\\b"
+    ]},
+    {"label": "document", "weight": 2, "patterns": [
+      "\\bextract\\b.{0,30}\\btext\\b", "\\b(attached|this) (pdf|file|document)\\b", "\\bpages?\\b.{0,30}\\b(pdf|ocr|scan|upload)"
+    ]},
+    {"label": "knowledge", "weight": 3, "patterns": [
+      "\\b(my|our|the plant'?s?)\\s+(\\w+\\s+){0,2}(sops?|documents?|docs|manuals?|procedures?|records?|reports?|files?|data ?sheets?|logs?|drawings?|standards?)\\b",
+      "\\bsops?\\b", "\\baccording to\\b", "\\bknowledge (base|graph)\\b",
+      "\\b(uploaded|ingested|stored) (documents?|files?|manuals?|pdfs?)\\b"
+    ]},
+    {"label": "knowledge", "weight": 2, "patterns": [
+      "\\b(manuals?|procedures?|datasheets?|data sheets?|work instructions?|permits?)\\b",
+      "\\b(inspection|incident|maintenance|shift) (reports?|logs?|records?)\\b",
+      "\\bwhat (does|do|did)\\b.{0,60}\\bsay\\b", "\\b(find|look up|search)\\b.{0,40}\\b(in|across|through)\\b.{0,20}\\b(the|our|my)\\b"
+    ]},
+    {"label": "general", "weight": 2, "patterns": [
+      "^\\s*(hi|hello|hey|thanks|thank you|good (morning|afternoon|evening))\\b", "\\bjoke\\b",
+      "^\\s*(what is|what are|explain|define|why does|how does)\\b"
+    ]}
+  ],
+  "examples": {
+    "coding": ["write a python script that parses a csv of sensor readings", "calculate the pressure drop with code",
+               "fix this python traceback", "run some code to compute an average"],
+    "document": ["ingest the pump manual pdf", "upload a scanned maintenance log", "was this pdf ocr'd",
+                 "add the datasheet file to the knowledge base"],
+    "knowledge": ["what do our operating procedures say about startup", "find the lockout steps in the plant manuals",
+                  "what did the inspection report say about corrosion", "which sop covers confined space entry"],
+    "general": ["hello", "what is a heat exchanger", "explain cavitation in simple terms", "thanks for the help"]
+  }
+}

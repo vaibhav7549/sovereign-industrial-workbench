@@ -282,6 +282,17 @@ Once both servers are running and you open `http://localhost:5173`:
 | `SERPAPI_KEY` | *(none; set in `backend/.env`)* | SerpAPI key for Google Scholar academic search. Leave empty for air-gapped use |
 | `CORS_ALLOW_ORIGINS` | *(local origins)* | Exact CORS allow-list, comma separated. `SERVER_LAN_IP` adds `https://<LAN_IP>` |
 | `VITE_API_URL` | `/api` | Frontend API base. Relative, proxied by Nginx (Docker) or Vite (dev) |
+| `INGEST_INBOX_DIR` | `$ENCRYPTION_DATA_DIR/inbox` | Folder the agent's `ingest_pdf` tool may read (plain file names only) |
+| `PDF_OCR_MIN_CHARS` | `50` | Pages with less pypdf text than this are OCR'd with Tesseract (`eng`). `0` disables OCR |
+| `PDF_OCR_MAX_PAGES` | `0` | Maximum OCR'd pages per PDF; `0` = no limit |
+| `PDF_VISION_ENABLED` | `false` | Describe pages that contain images with the local vision model; the description is stored under its own heading |
+| `VISION_ALLOW_REMOTE` | `false` | Vision only runs when `LLM_BASE_URL` is a loopback address unless this is `true` |
+| `VISION_MODEL` | `qwen2.5vl:3b` | Vision model name at `LLM_BASE_URL` |
+| `VISION_TIMEOUT_S` | `60` | Per-page vision timeout; on timeout or no connection the rest is ingested text-only |
+| `ROUTER_EMBED_FALLBACK` | `false` | Use embedding similarity when no keyword rule matches (rules: `backend/router_rules.json`) |
+| `ROUTER_RULES_PATH` | `backend/router_rules.json` | Alternative router rules file |
+| `SANDBOX_SOCKET` | `/ipc/runner.sock` | Unix socket of `sandbox-runner` (set by compose; no TCP) |
+| `SANDBOX_IMAGE` / `SANDBOX_MAX_CONCURRENT` | `python:3.11-slim` / `2` | `sandbox-runner` settings in `docker-compose.yml` |
 
 ---
 
@@ -291,12 +302,12 @@ Once both servers are running and you open `http://localhost:5173`:
 | :--- | :--- | :--- |
 | `GET /` | `GET` | Health check, active model, and runtime endpoint status |
 | `POST /login` | `POST` | Authenticates operator username and issues session UUID |
-| `POST /agent/query` | `POST` | Agent reasoning loop, tool execution, and keyword extraction |
+| `POST /agent/query` | `POST` | Router (`route` field) picks the agent: coding gets only the sandbox tool; others get the knowledge/ingest tools. Returns `tool_calls` |
 | `POST /agent/summarize` | `POST` | LexRank summary of a Scholar result link. Needs `token` (401 otherwise); every redirect hop is checked, and internal addresses are refused |
 | `POST /agent/tool` | `POST` | Direct invocation of MCP Knowledge Graph tools |
 | `POST /ingest/pdf` | `POST` | Multipart PDF/text upload. With encryption on: DP noise + CKKS + AES-GCM, then MCP atom ingestion |
 | `POST /agent/verify-encryption` | `POST` | Encryption status, DP epsilon, encrypted atom count, audit-chain integrity |
-| `POST /dummy_tool` | `POST` | Verifies air-gapped sandbox diagnostic routing |
+| `POST /dummy_tool` | `POST` | Diagnostic Ping: runs `print(1+1)` in the isolated code sandbox and reports the result |
 
 ---
 
@@ -318,6 +329,20 @@ Tests: `cd backend && python -m pytest -q tests`. Benchmark: `taskset -c 0 pytho
 
 ---
 
+## 🧪 Agent tools, query router and code sandbox
+
+- **Router** (`backend/router.py`): every `/agent/query` is labelled `knowledge`, `coding`, `document` or `general`. Keyword rules come from `backend/router_rules.json` (regexes plus weights, so you can edit them without touching code). An embedding fallback is available with `ROUTER_EMBED_FALLBACK=true`. The decision is the first line of the execution trace and the `route` field of the response.
+- **Coding** queries go to an agent whose only tool is `run_python_sandboxed`. Everything else uses the normal agent: `search_knowledge` (encrypted) or `search_mcp`, `summarize_url`, `ingest_pdf` and the report tool.
+- **Sandbox** (`sandbox-runner/`, [`docs/SANDBOX.md`](docs/SANDBOX.md)): each run is a fresh `python:3.11-slim` container with no network and a read-only filesystem, running as user 65534 with 256 MB, 0.5 CPU and at most 10 s. `sandbox-runner` is the only service with the Docker socket. It has no network and no ports; the backend reaches it through a Unix socket. On rootful Docker the socket is root-equivalent; see the threat model.
+  ```bash
+  docker pull python:3.11-slim      # sandbox image (already present if the backend image was built)
+  docker compose up -d --build
+  docker compose config | grep -n "docker.sock"   # must appear only under sandbox-runner
+  ```
+- **PDF ingestion**: pypdf first, then Tesseract OCR for pages with little text, then optionally vision descriptions for pages with images (`PDF_VISION_ENABLED=true`, local `LLM_BASE_URL` only). Responses report `ocr_pages`, `ocr_warnings` and, when vision is on, `vision_pages` and `vision_warnings`.
+
+---
+
 ## 🔧 Troubleshooting FAQ
 
 - **Port 8000 is already in use:**
@@ -328,6 +353,8 @@ Tests: `cd backend && python -m pytest -q tests`. Benchmark: `taskset -c 0 pytho
   Both containers use host networking, so `http://localhost:11434/v1` in `docker-compose.yml` is the host's Ollama. Keep Ollama on its default `127.0.0.1` binding. Do not set `OLLAMA_HOST=0.0.0.0`.
 - **Frontend container keeps restarting:**
   `docker compose logs frontend` shows `[tls] ... missing`. Run `./scripts/gen_tls_cert.sh <LAN_IP>` and start again.
+- **Diagnostic Ping says the sandbox socket was not found:**
+  Start the runner (`docker compose up -d sandbox-runner`) and check `docker compose logs sandbox-runner`. If it reports the image is missing, run `docker pull python:3.11-slim`.
 - **Browser shows a certificate warning:**
   The client has not trusted `certs/ca/ca.crt` yet, or you opened an IP that isn't in the certificate. See `docs/TLS_SETUP.md`.
 - **NLTK Tokenizer warnings:**

@@ -216,3 +216,121 @@ def test_plain_ingest_pdf_reports_ocr_and_survives_page_failure(app, monkeypatch
     content = [a for t, a in app.atomic.received if t == "create_atom"][0]["content"]
     assert content.startswith("## Page 1\n") and "## Page 3\nScanned flange torque table" in content
     assert "## Page 2" not in content                    # failed page kept its (empty) pypdf text
+
+
+# ----------------------------------------------------------------------------- /dummy_tool sandbox health (Task 3)
+def test_dummy_tool_is_a_sandbox_health_check(app, monkeypatch):
+    calls = []
+
+    async def fake_run(code, timeout=5.0):
+        calls.append((code, timeout))
+        return {"exit_code": 0, "stdout": "2\n", "stderr": "", "timed_out": False, "truncated": False,
+                "oom_killed": False, "duration_ms": 640}
+
+    monkeypatch.setattr(app.main.sandbox_client, "run_code", fake_run)
+    r = app.post("/dummy_tool", params={"input_val": "rm -rf /", "token": app.token}).json()
+    assert calls == [("print(1+1)", 5)]                # fixed probe; input_val is never executed
+    assert r["status"] == "success" and "print(1+1) -> 2" in r["message"] and r["sandbox"]["stdout"] == "2\n"
+
+
+def test_dummy_tool_reports_sandbox_down(app, monkeypatch):
+    async def down(code, timeout=5.0):
+        return {"error": "sandbox-runner socket /ipc/runner.sock not found", "status": 503}
+
+    monkeypatch.setattr(app.main.sandbox_client, "run_code", down)
+    r = app.post("/dummy_tool", params={"input_val": "x", "token": app.token}).json()
+    assert r["status"] == "error" and "not found" in r["message"]
+
+
+def test_dummy_tool_still_requires_token(app):
+    assert app.post("/dummy_tool", params={"input_val": "x", "token": "bogus"}).status_code == 401
+
+
+# ----------------------------------------------------------------------------- router (Task 4)
+def test_coding_query_gets_sandbox_only_agent(app, monkeypatch):
+    runs = []
+
+    async def fake_run(code, timeout=5.0):
+        runs.append(code)
+        return {"exit_code": 0, "stdout": "42\n", "stderr": "", "timed_out": False, "truncated": False,
+                "oom_killed": False, "duration_ms": 500}
+
+    monkeypatch.setattr(app.main.sandbox_client, "run_code", fake_run)
+    llm = ScriptedChatModel(script=[tool_call("run_python_sandboxed", {"code": "print(6*7)"}),
+                                    answer("The result is 42."), answer("python")])
+    use_llm(app, monkeypatch, llm)
+    r = app.post("/agent/query", params={"query": "write a python script that prints 6*7", "token": app.token}).json()
+
+    assert llm.bound_tool_names == ["run_python_sandboxed"]          # nothing else is offered
+    assert runs == ["print(6*7)"]
+    assert r["route"]["label"] == "coding" and r["route"]["method"] == "keywords"
+    assert r["agent_thinking"].splitlines()[0].startswith("🧭 Router: 'coding'")
+    assert [c["name"] for c in r["tool_calls"]] == ["run_python_sandboxed"]
+    assert OLD_KEYS | {"tool_calls", "route"} == set(r)               # shape: only 'route' added
+
+
+def test_knowledge_query_keeps_current_agent(app, monkeypatch):
+    llm = ScriptedChatModel(script=[answer("See SOP-12."), answer("pumps")])
+    use_llm(app, monkeypatch, llm)
+    r = app.post("/agent/query", params={"query": "what do my SOPs say about pumps", "token": app.token}).json()
+    from tools import select_tool_names
+
+    assert r["route"]["label"] == "knowledge"
+    assert llm.bound_tool_names == select_tool_names(False)          # unchanged tool set
+    assert "run_python_sandboxed" not in llm.bound_tool_names
+
+
+def test_document_query_has_ingest_tools(app, monkeypatch):
+    llm = ScriptedChatModel(script=[answer("ok"), answer("pdf")])
+    use_llm(app, monkeypatch, llm)
+    r = app.post("/agent/query", params={"query": "ingest pump_manual.pdf from the inbox", "token": app.token}).json()
+    assert r["route"]["label"] == "document" and "ingest_pdf" in llm.bound_tool_names
+
+
+def test_route_logged_in_fallback_trace(app, monkeypatch):
+    use_llm(app, monkeypatch, ScriptedChatModel(script=[answer("x")], fail_with="connection refused"))
+    r = app.post("/agent/query", params={"query": "write a python function to read a PDF", "token": app.token}).json()
+    assert "Air-Gapped Fallback" in r["agent_response"]
+    assert r["route"]["label"] == "coding" and r["agent_thinking"].startswith("🧭 Router: 'coding'")
+
+
+# ----------------------------------------------------------------------------- vision in /ingest/pdf (Task 5)
+def test_plain_ingest_pdf_stores_vision_description_under_heading(app, monkeypatch):
+    import io
+
+    import pdf_vision
+    from test_pdf_ocr import HAVE_PIL_FONT, make_scanned_pdf
+
+    if not HAVE_PIL_FONT:
+        pytest.skip("Pillow with FreeType needed")
+    monkeypatch.setenv("PDF_VISION_ENABLED", "true")
+    monkeypatch.setenv("PDF_OCR_MIN_CHARS", "0")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr(pdf_vision, "describe_page", lambda data, page, settings: "P&ID: pump P-101 to tank T-4.")
+    r = app.post("/ingest/pdf", params={"token": app.token},
+                 files={"file": ("pid.pdf", io.BytesIO(make_scanned_pdf()), "application/pdf")}).json()
+    assert r["status"] == "success" and r["vision_pages"] == 1 and r["vision_warnings"] == []
+    content = [a for t, a in app.atomic.received if t == "create_atom"][0]["content"]
+    assert "## Page 1\n### Image description (vision model, page 1)\nP&ID: pump P-101 to tank T-4." in content
+
+
+def test_plain_ingest_pdf_vision_unreachable_still_ingests(app, monkeypatch):
+    import io
+
+    import pdf_vision
+    from test_pdf_ocr import LONG_TEXT, HAVE_PIL_FONT, concat_pdfs, make_scanned_pdf, make_text_pdf
+
+    if not HAVE_PIL_FONT:
+        pytest.skip("Pillow with FreeType needed")
+    monkeypatch.setenv("PDF_VISION_ENABLED", "true")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:9/v1")      # nothing listens on port 9
+
+    def unreachable(data, page, settings):
+        raise pdf_vision.VisionUnreachable("cannot connect to http://127.0.0.1:9/v1")
+
+    monkeypatch.setattr(pdf_vision, "describe_page", unreachable)
+    pdf = concat_pdfs(make_text_pdf([LONG_TEXT]), make_scanned_pdf())
+    r = app.post("/ingest/pdf", params={"token": app.token},
+                 files={"file": ("mixed.pdf", io.BytesIO(pdf), "application/pdf")}).json()
+    assert r["status"] == "success" and r["vision_pages"] == 0
+    assert "unreachable" in r["vision_warnings"][0]

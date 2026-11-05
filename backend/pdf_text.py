@@ -34,11 +34,19 @@ class OcrReport:
     attempted: List[int] = field(default_factory=list)   # 1-based pages sent to OCR
     ocr_pages: List[int] = field(default_factory=list)   # pages whose text now comes from OCR
     warnings: List[str] = field(default_factory=list)
+    # Vision (pdf_vision.py, Task 5): only reported when PDF_VISION_ENABLED=true.
+    vision_enabled: bool = False
+    vision_pages: List[int] = field(default_factory=list)
+    vision_warnings: List[str] = field(default_factory=list)
 
     def summary(self) -> dict:
         """Fields added to ingestion responses."""
-        return {"ocr_pages": len(self.ocr_pages), "ocr_page_numbers": list(self.ocr_pages),
-                "ocr_warnings": list(self.warnings)}
+        out = {"ocr_pages": len(self.ocr_pages), "ocr_page_numbers": list(self.ocr_pages),
+               "ocr_warnings": list(self.warnings)}
+        if self.vision_enabled:
+            out.update({"vision_pages": len(self.vision_pages), "vision_page_numbers": list(self.vision_pages),
+                        "vision_warnings": list(self.vision_warnings)})
+        return out
 
 
 def _env_int(name: str, default: int) -> int:
@@ -116,18 +124,31 @@ def extract_pdf_pages(data: bytes, min_chars: Optional[int] = None, max_pages: O
     texts = [page.extract_text() or "" for page in reader.pages]
     report = OcrReport(pages_total=len(texts))
 
+    _ocr_pass(data, texts, report, min_chars, max_pages, ocr)
+
+    import pdf_vision   # Task 5: off unless PDF_VISION_ENABLED=true; never raises
+
+    if pdf_vision.vision_enabled():
+        pdf_vision.add_vision_descriptions(data, reader, texts, report)
+    return list(enumerate(texts, start=1)), report
+
+
+def _ocr_pass(data: bytes, texts: List[str], report: OcrReport, min_chars: int, max_pages: int,
+              ocr: Optional[Callable[[bytes, int], str]]) -> None:
+    """OCR the pages whose pypdf text is too short, updating `texts` and `report` in place."""
+
     def too_short(t: str) -> bool:
         return len("".join(t.split())) < min_chars
 
     candidates = [i + 1 for i, t in enumerate(texts) if too_short(t)]
     if not candidates:
-        return list(enumerate(texts, start=1)), report
+        return
 
     if ocr is None:
         ok, reason = ocr_available()
         if not ok:
             report.warnings.append(f"{reason}; {len(candidates)} page(s) kept with pypdf text only")
-            return list(enumerate(texts, start=1)), report
+            return
         ocr = ocr_page_image
 
     if max_pages and len(candidates) > max_pages:
@@ -147,4 +168,3 @@ def extract_pdf_pages(data: bytes, min_chars: Optional[int] = None, max_pages: O
         if len("".join(text.split())) > len("".join(texts[page - 1].split())):
             texts[page - 1] = text
             report.ocr_pages.append(page)
-    return list(enumerate(texts, start=1)), report

@@ -45,14 +45,41 @@ services:
       - DP_EPSILON=${DP_EPSILON:-1.0}
       - DP_DELTA=1e-5
       - EMBED_MODEL=nomic-embed-text
+      # --- Code sandbox: reached only through this Unix socket (no TCP, no shared network) ---
+      - SANDBOX_SOCKET=/ipc/runner.sock
     volumes:
       # Named volume, not a file bind-mount: binding a host file that does not exist yet
       # makes Docker create a *directory* at that path and context loading fails.
       - sovereign-crypto:/data
+      # Shared only with sandbox-runner. The backend gets the runner's socket, NOT the Docker socket.
+      - sandbox-ipc:/ipc
     # RAM-backed /tmp: OCR writes short-lived plaintext page images and PDF copies there
     # (pdf2image, pytesseract). tmpfs keeps them off disk and they vanish on container stop.
     tmpfs:
       - /tmp:size=512m
+    restart: unless-stopped
+
+  # The ONLY service with the Docker socket (root-equivalent on rootful Docker: docs/SANDBOX.md).
+  # No network at all and no ports: reachable only via /ipc/runner.sock in the sandbox-ipc volume.
+  sandbox-runner:
+    build:
+      context: ./sandbox-runner
+      dockerfile: Dockerfile
+    container_name: sovereign-sandbox-runner
+    network_mode: none
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - sandbox-ipc:/ipc
+    environment:
+      - SANDBOX_IMAGE=python:3.11-slim
+      - SANDBOX_MAX_CONCURRENT=2
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   frontend:
@@ -76,3 +103,5 @@ volumes:
   # Holds the sealed CKKS context, the ciphertext vault and the audit log.
   # Back it up together with ENCRYPTION_MASTER_KEY (stored separately).
   sovereign-crypto:
+  # Holds only runner.sock: the backend <-> sandbox-runner channel.
+  sandbox-ipc:
