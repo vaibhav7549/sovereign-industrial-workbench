@@ -175,7 +175,7 @@ You can run the workbench either **Locally (Bare Metal)** or with **Docker Compo
 
 ### Method 2: Running with Docker Compose (HTTPS, two-laptop demo)
 
-Linux host. Nginx serves the UI and the API over TLS on port 443. The backend listens only on `127.0.0.1:8000`, so it is not reachable from the LAN.
+Linux host. Nginx serves the UI and the API over TLS on port 443. The backend listens only on `127.0.0.1:8000`, so it is not reachable from the LAN. All model settings, inference endpoints, credentials, and security preferences are loaded from `backend/.env`.
 
 1. Create the TLS certificates once, and again whenever the LAN IP changes:
    ```bash
@@ -196,6 +196,14 @@ Linux host. Nginx serves the UI and the API over TLS on port 443. The backend li
    ```bash
    docker compose down
    ```
+
+#### 🐳 Docker Compose Architecture & Standards
+The [`docker-compose.yml`](file:///d:/Vaibhav%20Programs/Mini-Project%202/sovereign-industrial-workbench/docker-compose.yml) includes:
+- **Centralized Environment Management**: Loads runtime variables via `env_file: ./backend/.env`, separating configuration from container definitions.
+- **Cross-Platform Host Routing**: Configures `extra_hosts` mapping `host.docker.internal:host-gateway`, enabling containerized services to communicate with host-hosted inference engines (such as Ollama or LM Studio) across Windows, Linux, and macOS.
+- **Zero-Secret Repository Hygiene**: Eliminates hardcoded tokens or API credentials in compose files.
+- **Compose V2 Compliance**: Follows the modern Compose Specification without deprecated schema attributes.
+
 
 ---
 
@@ -248,23 +256,35 @@ Once both servers are running and you open `http://localhost:5173`:
    - On the login screen, enter an Operator ID (e.g., `operator.v_88`).
    - Click **Authenticate Session**. The backend issues an isolated clearance token.
 
-2. **Query the Knowledge Graph & Chat**:
-   - Type an industrial query in the bottom composer (e.g., *"What are the primary safety protocols for industrial catalytic hydrocrackers?"*).
-   - Click Send (or press Enter).
-   - Click **"View Execution Trace"** above the answer to inspect the agent's chain-of-thought and tool calls.
+2. **Modern Composer & Deep Research Toggle (DeepSeek-Style)**:
+   - Features a card-based composer with an expansive auto-resizing textarea and dedicated actions toolbar.
+   - Toggle **`🔬 Deep Research`** (inspired by DeepSeek's DeepThink mode) to activate external SerpAPI literature search. When toggled OFF, external API calls are completely bypassed for strict, lightning-fast on-premise execution.
+   - Includes quick prompt starters for Heat Exchanger Calculations, Hydrocracker Safety Protocols, CKKS Homomorphic Encryption Audits, and Pinch Network Optimization.
 
-3. **Explore Google Scholar Research Grounding**:
-   - Below the response, the interactive **Research Coverage Chart** plots academic literature density across keywords.
-   - In the right-hand panel, click any keyword pill under **RESEARCH PAPERS (SCHOLAR)** to expand paper cards.
-   - Hover over any paper to see live web-scraped previews.
-   - Click the ✨ Sparkle button on a paper to open the **LexRank Extractive Summary Modal**.
+3. **DeepSeek R1 Thought Process Trace**:
+   - Agent responses include an interactive **`🧠 Thought Process`** drawer displaying reasoning latency, model trace, and decision steps before final synthesis.
 
-4. **Ingest Technical Documents (PDF to KG Atom)**:
-   - Click **"Ingest Document"** in the left sidebar navigation.
-   - Select any technical PDF. The backend extracts text using `pypdf`, converts it into clean markdown sections, and pushes an atom into the centralized Knowledge Graph via MCP.
+4. **Dynamic Hardware & Inference Telemetry**:
+   - The lower-left sidebar footer monitors real-time system performance:
+     - **Inference Latency**: Updated dynamically on every query turn and diagnostic test (e.g., `0.85s/turn`).
+     - **GPU Acceleration**: Detects CUDA devices, Apple Silicon Metal, or high-performance CPU SIMD offloading status (`100% VRAM Offload`).
+     - Clicking the metrics card triggers an instant AST sandbox diagnostic check.
 
-5. **Diagnostic Sandbox Ping**:
-   - Click **"Diagnostic Ping"** in the left sidebar to test isolated backend tool routing and session security.
+5. **Live Execution Sandbox Console**:
+   - Located in the right sidebar with a live pulsing beacon (`● SANDBOX CONSOLE`).
+   - Displays real-time streaming traces of AST mathematical evaluation, query dispatch, and document compilation.
+   - Includes quick **Ping** and **Clear** controls directly on the terminal header.
+
+6. **Active Knowledge Vault & Topology Inspector**:
+   - Live indicator for centralized Atomic MCP connectivity and indexed atom counts.
+   - Click **"Inspect"** or **"Knowledge Vault"** to open a detailed modal showing engine topology, endpoint status, and CKKS homomorphic encryption parameters.
+
+7. **Explore Google Scholar Research Grounding**:
+   - When **Deep Research** is enabled, the interactive **Research Coverage Chart** plots academic literature density across keywords.
+   - Expand paper cards, view live summaries, and open the **LexRank Extractive Summary Modal**.
+
+8. **Ingest Technical Documents (PDF to KG Atom)**:
+   - Click **"Ingest Document"** in the sidebar to upload technical PDFs, which are converted to structured markdown chunks and indexed into the Knowledge Graph.
 
 ---
 
@@ -274,9 +294,9 @@ Once both servers are running and you open `http://localhost:5173`:
 | :--- | :--- | :--- |
 | `HOST` | `0.0.0.0` | Backend host binding |
 | `PORT` | `8000` | Backend port |
-| `LLM_BASE_URL` | `http://localhost:1234/v1` | OpenAI-compatible endpoint (LM Studio / Ollama / vLLM) |
-| `LLM_MODEL` | `qwen2.5-7b-instruct-1m` | Open-weight model name loaded in local engine |
-| `LLM_API_KEY` | `1234` | API authorization key for inference endpoint |
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | OpenAI-compatible inference endpoint (Ollama / LM Studio / vLLM) |
+| `LLM_MODEL` | `qwen2.5:3b` | Open-weight model name (e.g. `qwen2.5:3b`, `qwen2.5:7b`, `llama3:8b`, etc.) |
+| `LLM_API_KEY` | `ollama` | API authorization key for inference endpoint |
 | `MCP_URL` | `http://localhost:8080/mcp` | Centralized Atomic Model Context Protocol server URL |
 | `MCP_AUTH_HEADER` | *(none; set in `backend/.env`)* | Authorization token for MCP server |
 | `SERPAPI_KEY` | *(none; set in `backend/.env`)* | SerpAPI key for Google Scholar academic search. Leave empty for air-gapped use |
@@ -293,6 +313,9 @@ Once both servers are running and you open `http://localhost:5173`:
 | `ROUTER_RULES_PATH` | `backend/router_rules.json` | Alternative router rules file |
 | `SANDBOX_SOCKET` | `/ipc/runner.sock` | Unix socket of `sandbox-runner` (set by compose; no TCP) |
 | `SANDBOX_IMAGE` / `SANDBOX_MAX_CONCURRENT` | `python:3.11-slim` / `2` | `sandbox-runner` settings in `docker-compose.yml` |
+| `MCP_AUTH_HEADER` | `Bearer <token>` | Authorization token for Atomic MCP server |
+| `SERPAPI_KEY` | *(optional)* | SerpAPI key for Google Scholar academic search (air-gapped fallback available) |
+| `VITE_API_URL` | `http://localhost:8000` | Frontend backend gateway URL |
 
 ---
 
