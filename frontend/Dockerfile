@@ -22,7 +22,9 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Refuse to start without certificates (they are bind-mounted at runtime, never baked in).
 COPY 10-check-tls-certs.sh /docker-entrypoint.d/10-check-tls-certs.sh
-RUN chmod 755 /docker-entrypoint.d/10-check-tls-certs.sh && mkdir -p /etc/nginx/certs
+RUN sed -i 's/\r$//' /docker-entrypoint.d/10-check-tls-certs.sh && \
+    chmod 755 /docker-entrypoint.d/10-check-tls-certs.sh && \
+    mkdir -p /etc/nginx/certs
 
 EXPOSE 80 443
 

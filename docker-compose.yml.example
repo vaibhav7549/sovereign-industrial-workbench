@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile
     container_name: sovereign-backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # All model settings, inference endpoints, credentials, and custom flags
@@ -26,8 +26,8 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      # Loopback only: reachable from Nginx on this host, not from the LAN.
-      - HOST=127.0.0.1
+      # Bind inside the container; the published host port is restricted to loopback below.
+      - HOST=0.0.0.0
       - PORT=8000
       - RUNNING_IN_DOCKER=true
       # Exact CORS allow-list; SERVER_LAN_IP is written to ./.env by scripts/gen_tls_cert.sh.
