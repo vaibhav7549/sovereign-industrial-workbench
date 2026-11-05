@@ -423,12 +423,14 @@ function ScholarKeywordSection({
   keyword, 
   results, 
   onOpenSummary,
-  forceExpanded 
+  forceExpanded,
+  token
 }: { 
   keyword: string, 
   results: {title: string, link: string}[], 
   onOpenSummary: (paper: {title: string, link: string}) => void,
   forceExpanded?: boolean
+  token: string | null
 }) {
   const [expanded, setExpanded] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -449,7 +451,7 @@ function ScholarKeywordSection({
     hoverTimer.current = window.setTimeout(async () => {
       setSummaryData(prev => ({...prev, [idx]: { loading: true }}));
       try {
-         const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(r.link)}&title=${encodeURIComponent(r.title)}`, { method: 'POST' });
+         const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(r.link)}&title=${encodeURIComponent(r.title)}&token=${token}`, { method: 'POST' });
          const data = await resp.json();
          setSummaryData(prev => ({...prev, [idx]: data}));
       } catch {
@@ -944,7 +946,7 @@ function App() {
   const handleOpenPaperSummary = async (paper: {title: string, link: string}) => {
     setActiveSummary({ loading: true, title: paper.title, link: paper.link });
     try {
-      const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(paper.link)}&title=${encodeURIComponent(paper.title)}`, { method: 'POST' });
+      const resp = await fetch(`${API_URL}/agent/summarize?url=${encodeURIComponent(paper.link)}&title=${encodeURIComponent(paper.title)}&token=${token}`, { method: 'POST' });
       const data = await resp.json();
       setActiveSummary({ ...data, title: paper.title, link: paper.link });
     } catch {
@@ -1374,6 +1376,7 @@ function App() {
                      results={results} 
                      onOpenSummary={handleOpenPaperSummary}
                      forceExpanded={allExpanded}
+                     token={token}
                    />
                  ))}
                </div>
