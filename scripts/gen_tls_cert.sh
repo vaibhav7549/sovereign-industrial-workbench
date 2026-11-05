@@ -103,8 +103,16 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid
 subjectAltName = $SAN
 EOF
+cat > "$TMP/server.cnf" <<'EOF'
+[req]
+distinguished_name = dn
+prompt = no
+[dn]
+CN = Sovereign Workbench
+O = Sovereign Workbench
+EOF
 openssl ecparam -name prime256v1 -genkey -noout -out "$TMP/server.key"
-openssl req -new -sha256 -key "$TMP/server.key" -subj "/CN=Sovereign Workbench/O=Sovereign Workbench" \
+openssl req -new -sha256 -key "$TMP/server.key" -config "$TMP/server.cnf" \
   -out "$TMP/server.csr"
 openssl x509 -req -sha256 -days "$SERVER_DAYS" -in "$TMP/server.csr" \
   -CA "$CA_DIR/ca.crt" -CAkey "$CA_DIR/ca.key" -set_serial "0x$(openssl rand -hex 16)" \
